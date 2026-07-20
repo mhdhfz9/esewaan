@@ -26,13 +26,13 @@
                     $confirmWithdrawalReason = filled($c->withdrawal_reason) ? $c->withdrawal_reason : '';
                 @endphp
                 <tr class="{{ $c->adminListRowClasses(auth()->user()) }} transition-colors">
-                    <td class="px-4 py-3 text-sm font-semibold text-slate-800">{{ $adminNegeriName }}</td>
-                    <td class="px-4 py-3 text-sm text-slate-600">
+                    <td class="px-4 py-3 text-center text-sm font-semibold text-slate-800">{{ $adminNegeriName }}</td>
+                    <td class="px-4 py-3 text-center text-sm text-slate-600">
                         {{ \App\Support\ApplicationCategories::label($c->kategori_permohonan) }}
                     </td>
-                    <td class="px-4 py-3 text-sm text-slate-600">{{ $c->premise?->negeri ?? '–' }}</td>
-                    <td class="px-4 py-3 text-sm">
-                        <div class="flex items-center gap-2">
+                    <td class="px-4 py-3 text-center text-sm text-slate-600">{{ $c->premise?->negeri ?? '–' }}</td>
+                    <td class="px-4 py-3 text-center text-sm">
+                        <div class="flex items-center justify-center gap-2">
                             @if(auth()->user()->isAdminHq() && $c->hasPendingWithdrawalRequest())
                                 <!-- <span
                                     class="inline-flex shrink-0 items-center justify-center rounded-full bg-amber-100 p-1 text-amber-600"
@@ -49,12 +49,12 @@
                             </span>
                         </div>
                     </td>
-                    <td class="px-4 py-3 text-sm text-slate-600">
+                    <td class="px-4 py-3 text-center text-sm text-slate-600">
                         {{ $c->created_at?->format('d/m/Y') ?? '–' }}
                     </td>
-                    <td class="px-4 py-3 text-sm text-slate-600">
+                    <td class="px-4 py-3 text-center text-sm text-slate-600">
                         @php $progressPercent = $c->proceedProgressPercent(); @endphp
-                        <div class="min-w-[6rem]">
+                        <div class="mx-auto min-w-[6rem]">
                             <div class="mb-1 flex items-center justify-between gap-2 text-xs">
                                 @if($c->isReadyToSendToHq() || $c->isPendingHqReview())
                                     <span class="{{ $c->adminListProgressPercentClass() }}">100%</span>
@@ -70,16 +70,8 @@
                             </div>
                         </div>
                     </td>
-                    <td @class([
-                        'px-4 py-3',
-                        'text-center' => auth()->user()->isAdminHq(),
-                        'text-right' => ! auth()->user()->isAdminHq(),
-                    ])>
-                        <div @class([
-                            'inline-flex items-center gap-1',
-                            'justify-center' => auth()->user()->isAdminHq(),
-                            'justify-end' => ! auth()->user()->isAdminHq(),
-                        ])>
+                    <td class="px-4 py-3 text-center">
+                        <div class="inline-flex items-center justify-center gap-1">
                             @if(auth()->user()->isAdminNegeri())
                                 @if($c->showsSubmitToAdminHqButton())
                                     <form
@@ -171,6 +163,19 @@
                                         </button>
                                     </form>
                                 @endif
+                                @if($c->isInDraftAgreementStage())
+                                    <a
+                                        href="{{ route('status-permohonan.review', $c) }}"
+                                        title="Semak"
+                                        class="rounded-lg p-2 text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-800"
+                                    >
+                                        <span class="sr-only">Semak</span>
+                                        <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                        </svg>
+                                    </a>
+                                @endif
                             @elseif(auth()->user()->isAdminHq())
                                 @if($c->hasPendingWithdrawalRequest())
                                     <a
@@ -235,6 +240,76 @@
                                             </svg>
                                         </button>
                                     </form>
+                                @elseif($c->isAwaitingHqDraftAction())
+                                <a
+                                    href="{{ route('status-permohonan.review', $c) }}"
+                                    title="Semak"
+                                    class="rounded-lg p-2 text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-800"
+                                >
+                                    <span class="sr-only">Semak</span>
+                                    <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                    </svg>
+                                </a>
+                                <form
+                                    id="send-puu-form-{{ $c->id }}"
+                                    method="POST"
+                                    action="{{ route('status-permohonan.send-puu', $c) }}"
+                                    class="inline"
+                                >
+                                    @csrf
+                                    <button
+                                        type="button"
+                                        title="Hantar ke PUU"
+                                        class="status-confirm-trigger rounded-lg p-2 text-slate-500 transition-colors hover:bg-indigo-50 hover:text-indigo-600"
+                                        data-confirm-title="Hantar ke PUU"
+                                        data-confirm-message="Permohonan ini akan dihantar ke PUU untuk semakan. Teruskan?"
+                                        data-confirm-form="send-puu-form-{{ $c->id }}"
+                                        data-confirm-button="Ya, Hantar"
+                                        data-confirm-tone="success"
+                                    >
+                                        <span class="sr-only">Hantar ke PUU</span>
+                                        <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                                        </svg>
+                                    </button>
+                                </form>
+                                <form
+                                    id="complete-draft-form-{{ $c->id }}"
+                                    method="POST"
+                                    action="{{ route('status-permohonan.complete', $c) }}"
+                                    class="inline"
+                                >
+                                    @csrf
+                                    <button
+                                        type="button"
+                                        title="Selesai"
+                                        class="status-confirm-trigger rounded-lg p-2 text-slate-500 transition-colors hover:bg-emerald-50 hover:text-emerald-600"
+                                        data-confirm-title="Selesai"
+                                        data-confirm-message="Draf perjanjian akan diluluskan tanpa pindaan dan dikembalikan kepada Negeri untuk penyediaan dokumen. Teruskan?"
+                                        data-confirm-form="complete-draft-form-{{ $c->id }}"
+                                        data-confirm-button="Ya, Selesai"
+                                        data-confirm-tone="success"
+                                    >
+                                        <span class="sr-only">Selesai</span>
+                                        <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                        </svg>
+                                    </button>
+                                </form>
+                                @elseif($c->isInDraftAgreementStage())
+                                <a
+                                    href="{{ route('status-permohonan.review', $c) }}"
+                                    title="Semak"
+                                    class="rounded-lg p-2 text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-800"
+                                >
+                                    <span class="sr-only">Semak</span>
+                                    <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                    </svg>
+                                </a>
                                 @else
                                 <a
                                     href="{{ route('status-permohonan.review', $c) }}"

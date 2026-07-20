@@ -93,7 +93,7 @@
 
     <section class="glass-card overflow-hidden">
         <div class="glass-divider-soft border-b px-6 py-4">
-            <h2 class="text-lg font-semibold text-slate-900">Langkah Tindakan Pentadbir Negeri</h2>
+            <h2 class="text-lg font-semibold text-slate-900">Langkah Tindakan Pegawai Negeri</h2>
             <p class="mt-0.5 text-xs text-slate-500">Status kemajuan langkah tindakan yang telah dilengkapkan.</p>
         </div>
 

@@ -72,7 +72,10 @@ class SidebarNotificationService
     {
         if ($user->isAdminHq()) {
             return RentalContract::query()
-                ->where('workflow_tahap', RentalContract::WORKFLOW_MENUNGGU_SEMAKAN_HQ);
+                ->whereIn('workflow_tahap', array_merge(
+                    [RentalContract::WORKFLOW_MENUNGGU_SEMAKAN_HQ],
+                    RentalContract::draftAgreementWorkflows(),
+                ));
         }
 
         return RentalContract::query()
@@ -80,7 +83,10 @@ class SidebarNotificationService
                 $user->isAdminNegeri() && filled($user->negeri),
                 fn (Builder $query) => $query->whereHas('premise', fn (Builder $premiseQuery) => $premiseQuery->where('negeri', $user->negeri))
             )
-            ->where('workflow_tahap', RentalContract::WORKFLOW_MENUNGGU_PROCEED_NEGERI);
+            ->whereIn('workflow_tahap', array_merge(
+                [RentalContract::WORKFLOW_MENUNGGU_PROCEED_NEGERI],
+                RentalContract::draftAgreementWorkflows(),
+            ));
     }
 
     /**

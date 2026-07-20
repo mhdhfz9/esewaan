@@ -232,7 +232,7 @@ test('approving a follow-up supersedes the parent contract', function () {
     expect($parent->isSuperseded())->toBeTrue()
         ->and($parent->superseded_by_contract_id)->toBe($child->id)
         ->and($parent->status_aktif)->toBe('tamat_tempoh')
-        ->and($child->isHqApproved())->toBeTrue();
+        ->and($child->workflow_tahap)->toBe(RentalContract::WORKFLOW_PENYEDIAAN_DRAF_PERJANJIAN);
 });
 
 test('superseded contract is hidden from the kontrak sewaan list but the follow-up appears', function () {

@@ -33,6 +33,10 @@ Route::middleware(['auth', 'admin'])->group(function () {
     Route::get('/status-permohonan', [StatusPermohonanController::class, 'index'])->name('status-permohonan.index');
     Route::get('/status-permohonan/{contract}/semak', [StatusPermohonanController::class, 'review'])->name('status-permohonan.review');
     Route::post('/status-permohonan/{contract}/sahkan', [StatusPermohonanController::class, 'approve'])->name('status-permohonan.approve')->middleware('throttle:form-actions');
+    Route::post('/status-permohonan/{contract}/hantar-puu', [StatusPermohonanController::class, 'sendToPuu'])->name('status-permohonan.send-puu')->middleware('throttle:form-actions');
+    Route::post('/status-permohonan/{contract}/selesai', [StatusPermohonanController::class, 'complete'])->name('status-permohonan.complete')->middleware('throttle:form-actions');
+    Route::post('/status-permohonan/{contract}/kembali-admin', [StatusPermohonanController::class, 'returnDraftToHq'])->name('status-permohonan.return-hq')->middleware('throttle:form-actions');
+    Route::post('/status-permohonan/{contract}/selesai-perjanjian', [StatusPermohonanController::class, 'finalize'])->name('status-permohonan.finalize')->middleware('throttle:form-actions');
     Route::patch('/status-permohonan/{contract}/checklist-autosave', [StatusPermohonanController::class, 'autosaveChecklist'])->name('status-permohonan.checklist-autosave')->middleware('throttle:autosave');
     Route::post('/status-permohonan/{contract}/tarik-semula', [StatusPermohonanController::class, 'requestWithdrawal'])->name('status-permohonan.request-withdrawal')->middleware('throttle:form-actions');
     Route::post('/status-permohonan/{contract}/tarik-semula/keputusan', [StatusPermohonanController::class, 'resolveWithdrawal'])->name('status-permohonan.resolve-withdrawal')->middleware('throttle:form-actions');

@@ -120,11 +120,11 @@ test('sidebar shows kontrak sewaan as top level menu for admin negeri', function
         ->assertSee('Pengurusan Permohonan');
 });
 
-test('approving application by hq moves contract to kontrak sewaan list', function () {
+test('proceeding with draft agreement moves contract to draft preparation, not kontrak sewaan', function () {
     $negeriAdmin = User::factory()->create(['role' => 'admin_negeri', 'negeri' => 'Melaka', 'name' => 'Admin Melaka']);
     $hqAdmin = User::factory()->create(['role' => 'admin_hq']);
     $contract = createKontrakSewaanContract('Melaka', RentalContract::WORKFLOW_MENUNGGU_SEMAKAN_HQ, null, $negeriAdmin);
-    $contract->premise->update(['nama_ptj' => 'Premis Selepas Sahkan']);
+    $contract->premise->update(['nama_ptj' => 'Premis Draf Perjanjian']);
     $contract->update(['hq_approved_at' => null]);
 
     $this->actingAs($hqAdmin)
@@ -134,13 +134,18 @@ test('approving application by hq moves contract to kontrak sewaan list', functi
     $contract->refresh();
 
     expect($contract->hq_approved_at)->not->toBeNull()
-        ->and($contract->workflow_tahap)->toBe(RentalContract::WORKFLOW_MENUNGGU_SEMAKAN_NEGERI);
+        ->and($contract->workflow_tahap)->toBe(RentalContract::WORKFLOW_PENYEDIAAN_DRAF_PERJANJIAN);
 
     $this->actingAs($negeriAdmin)
         ->get(route('kontrak-sewaan.index'))
         ->assertSuccessful()
-        ->assertSee('Premis Selepas Sahkan')
-        ->assertSee('Admin Melaka');
+        ->assertDontSee('Premis Draf Perjanjian');
+
+    $this->actingAs($negeriAdmin)
+        ->get(route('status-permohonan.index'))
+        ->assertSuccessful()
+        ->assertSee('Admin Melaka')
+        ->assertSee('Penyediaan Draf Perjanjian');
 });
 
 test('kontrak sewaan search filters by nama premis and admin negeri name', function () {

@@ -41,6 +41,7 @@ class RentalContract extends Model
         'catatan_hq',
         'remark',
         'workflow_tahap',
+        'semakan_count',
         'kategori_permohonan',
         'sah_sehingga',
         'admin_proceed_progress',
@@ -75,6 +76,44 @@ class RentalContract extends Model
     public const WORKFLOW_MENUNGGU_SEMAKAN_HQ = 'menunggu_semakan_hq';
 
     public const WORKFLOW_MENUNGGU_SEMAKAN_NEGERI = 'menunggu_semakan_negeri';
+
+    public const WORKFLOW_PENYEDIAAN_DRAF_PERJANJIAN = 'penyediaan_draf_perjanjian';
+
+    public const WORKFLOW_SEMAKAN_PUU = 'semakan_puu';
+
+    public const WORKFLOW_DRAF_PERJANJIAN_LULUS = 'draf_perjanjian_lulus';
+
+    public const WORKFLOW_DRAF_DIKEMBALIKAN_HQ = 'draf_dikembalikan_hq';
+
+    /**
+     * Workflow stages handled within the "Senarai Permohonan" / "Status Permohonan"
+     * draft-agreement flow after HQ decides to proceed with the draft agreement.
+     *
+     * @return list<string>
+     */
+    public static function draftAgreementWorkflows(): array
+    {
+        return [
+            self::WORKFLOW_PENYEDIAAN_DRAF_PERJANJIAN,
+            self::WORKFLOW_SEMAKAN_PUU,
+            self::WORKFLOW_DRAF_PERJANJIAN_LULUS,
+            self::WORKFLOW_DRAF_DIKEMBALIKAN_HQ,
+        ];
+    }
+
+    /**
+     * Draft-agreement stages where HQ (Admin) is the party acting on the
+     * application (PUU review round / mark as complete).
+     *
+     * @return list<string>
+     */
+    public static function hqDraftActionWorkflows(): array
+    {
+        return [
+            self::WORKFLOW_PENYEDIAAN_DRAF_PERJANJIAN,
+            self::WORKFLOW_SEMAKAN_PUU,
+        ];
+    }
 
     /**
      * @return list<string>
@@ -122,6 +161,7 @@ class RentalContract extends Model
             'kadar_sewa_bulanan' => 'decimal:2',
             'keluasan_mp' => 'decimal:2',
             'admin_proceed_progress' => 'array',
+            'semakan_count' => 'integer',
             'withdrawal_requested_at' => 'datetime',
             'withdrawal_resolved_at' => 'datetime',
             'hq_approved_at' => 'datetime',
@@ -338,6 +378,89 @@ class RentalContract extends Model
         return $this->workflow_tahap === self::WORKFLOW_MENUNGGU_SEMAKAN_HQ;
     }
 
+    public function isPenyediaanDrafPerjanjian(): bool
+    {
+        return $this->workflow_tahap === self::WORKFLOW_PENYEDIAAN_DRAF_PERJANJIAN;
+    }
+
+    public function isSemakanPuu(): bool
+    {
+        return $this->workflow_tahap === self::WORKFLOW_SEMAKAN_PUU;
+    }
+
+    public function isInDraftAgreementStage(): bool
+    {
+        return in_array($this->workflow_tahap, self::draftAgreementWorkflows(), true);
+    }
+
+    public function isAwaitingHqDraftAction(): bool
+    {
+        return in_array($this->workflow_tahap, self::hqDraftActionWorkflows(), true);
+    }
+
+    public function isDrafPerjanjianLulus(): bool
+    {
+        return $this->workflow_tahap === self::WORKFLOW_DRAF_PERJANJIAN_LULUS;
+    }
+
+    public function isDrafDikembalikanHq(): bool
+    {
+        return $this->workflow_tahap === self::WORKFLOW_DRAF_DIKEMBALIKAN_HQ;
+    }
+
+    public function semakanLabel(): string
+    {
+        return 'Semakan '.max(1, (int) $this->semakan_count);
+    }
+
+    /**
+     * Zero-based index of the current stage within the draft-agreement lifecycle.
+     */
+    public function draftAgreementCurrentStepIndex(): int
+    {
+        return match (true) {
+            $this->isHqApproved() => 5,
+            $this->isDrafDikembalikanHq() => 4,
+            $this->isDrafPerjanjianLulus() => 3,
+            $this->isPenyediaanDrafPerjanjian(), $this->isSemakanPuu() => 2,
+            $this->isPendingHqReview() => 1,
+            default => 0,
+        };
+    }
+
+    /**
+     * Ordered lifecycle steps used by the review page progress stepper.
+     *
+     * @return list<array{label: string, description: string, state: string}>
+     */
+    public function draftAgreementProgressSteps(): array
+    {
+        $currentIndex = $this->draftAgreementCurrentStepIndex();
+
+        $draftDescription = $this->isSemakanPuu()
+            ? $this->semakanLabel()
+            : 'Penyediaan & semakan PUU';
+
+        $steps = [
+            ['label' => 'Permohonan Baru', 'description' => 'Butiran permohonan'],
+            ['label' => 'Semakan HQ', 'description' => 'Pengesahan permohonan'],
+            ['label' => 'Penyediaan Draf', 'description' => $draftDescription],
+            ['label' => 'Draf Lulus', 'description' => 'Draf perjanjian diluluskan'],
+            ['label' => 'Pengesahan & Tandatangan', 'description' => 'Dokumen ditandatangani'],
+            ['label' => 'Selesai', 'description' => 'Kontrak sewaan'],
+        ];
+
+        foreach ($steps as $index => $step) {
+            $steps[$index]['state'] = match (true) {
+                $index < $currentIndex => 'completed',
+                $index === $currentIndex => 'current',
+                default => 'upcoming',
+            };
+        }
+
+        return $steps;
+    }
+
     public function hasPendingWithdrawalRequest(): bool
     {
         return $this->withdrawal_status === self::WITHDRAWAL_PENDING;
@@ -357,7 +480,8 @@ class RentalContract extends Model
     public function canBeDeletedByAdminNegeri(): bool
     {
         return ! $this->isPendingHqReview()
-            && ! $this->hasPendingWithdrawalRequest();
+            && ! $this->hasPendingWithdrawalRequest()
+            && ! $this->isInDraftAgreementStage();
     }
 
     public function isPendingAdminReview(): bool
@@ -569,6 +693,10 @@ class RentalContract extends Model
             self::WORKFLOW_MENUNGGU_PROCEED_NEGERI => 'Menunggu langkah tindakan',
             self::WORKFLOW_MENUNGGU_SEMAKAN_HQ => 'Menunggu semakan HQ',
             self::WORKFLOW_MENUNGGU_SEMAKAN_NEGERI => 'Menunggu semakan pentadbir negeri',
+            self::WORKFLOW_PENYEDIAAN_DRAF_PERJANJIAN => 'Penyediaan Draf Perjanjian',
+            self::WORKFLOW_SEMAKAN_PUU => $this->semakanLabel(),
+            self::WORKFLOW_DRAF_PERJANJIAN_LULUS => 'Draf Perjanjian Lulus Tanpa Pindaan',
+            self::WORKFLOW_DRAF_DIKEMBALIKAN_HQ => 'Draf Perjanjian Dikembalikan ke AADK',
             default => match ($this->status_aktif) {
                 'aktif' => 'Aktif',
                 'tamat_tempoh' => 'Tamat tempoh',
@@ -605,6 +733,10 @@ class RentalContract extends Model
             return 'glass-status-badge glass-status-badge--hq-review';
         }
 
+        if ($this->isInDraftAgreementStage()) {
+            return 'glass-status-badge glass-status-badge--hq-review';
+        }
+
         return 'glass-status-badge';
     }
 
@@ -626,6 +758,10 @@ class RentalContract extends Model
                 : 'Menunggu langkah tindakan pentadbir negeri',
             self::WORKFLOW_MENUNGGU_SEMAKAN_HQ => 'Menunggu semakan HQ',
             self::WORKFLOW_MENUNGGU_SEMAKAN_NEGERI => 'Menunggu semakan pentadbir negeri',
+            self::WORKFLOW_PENYEDIAAN_DRAF_PERJANJIAN => 'Penyediaan Draf Perjanjian',
+            self::WORKFLOW_SEMAKAN_PUU => $this->semakanLabel(),
+            self::WORKFLOW_DRAF_PERJANJIAN_LULUS => 'Draf Perjanjian Lulus Tanpa Pindaan',
+            self::WORKFLOW_DRAF_DIKEMBALIKAN_HQ => 'Draf Perjanjian Dikembalikan ke AADK',
             default => $this->workflow_tahap ?? '–',
         };
     }

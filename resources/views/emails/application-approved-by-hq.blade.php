@@ -43,7 +43,7 @@
     </table>
 
     <p class="cta">
-        <a href="{{ route('kontrak-sewaan.show', $contract) }}">Lihat Kontrak Sewaan</a>
+        <a href="{{ route('status-permohonan.index') }}">Lihat Senarai Permohonan</a>
     </p>
 
     <p>Ini adalah notifikasi automatik daripada Sistem E-Sewaan AADK.</p>
