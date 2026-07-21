@@ -9,8 +9,8 @@
     $defaultRole = old('role', auth()->user()->isAdminNegeri() ? 'admin_negeri' : 'admin_hq');
     $showNegeriField = ($lockNegeri ?? false) || $defaultRole === 'admin_negeri';
 @endphp
-<div class="mx-auto max-w-md">
-    <div class="glass-card p-8">
+<div class="flex min-h-[calc(100vh-7rem)] items-center justify-center lg:min-h-[calc(100vh-8rem)]">
+    <div class="glass-card w-full max-w-md p-8">
         <h1 class="mb-6 text-2xl font-bold text-slate-800">Pendaftaran Pengguna</h1>
         <form method="POST" action="{{ route('users.store') }}" class="space-y-5">
             @csrf

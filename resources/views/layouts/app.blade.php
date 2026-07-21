@@ -11,8 +11,10 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.bunny.net">
     <link href="https://fonts.bunny.net/css?family=instrument-sans:400,500,600,700" rel="stylesheet">
+    @include('partials.appearance-boot')
     @include('partials.sidebar-scroll-styles')
     @include('partials.glass-theme')
+    @include('partials.appearance-theme')
     @stack('styles')
 </head>
 <body class="liquid-bg min-h-screen font-sans antialiased">
@@ -26,7 +28,7 @@
         {{-- Desktop Sidebar --}}
         <aside id="sidebar" class="glass-sidebar hidden lg:flex h-full min-h-0 w-60 flex-shrink-0 flex-col overflow-hidden transition-all duration-300">
             <div class="flex h-full min-h-0 flex-col">
-                <div class="flex flex-shrink-0 items-center gap-3 border-b border-white/10 px-4 py-5">
+                <div class="flex h-20 flex-shrink-0 items-center gap-3 border-b border-white/10 px-4">
                     @php
                         $logoPath = null;
                         $custom = config('app.logo');
@@ -67,6 +69,7 @@
                     @else
                     @include('partials.sidebar-kontrak-sewaan')
                     @endif
+                    @include('partials.sidebar-penampilan')
                 </nav>
                 @include('partials.sidebar-profile-footer')
             </div>
@@ -76,7 +79,7 @@
         <div id="mobile-sidebar-overlay" class="lg:hidden fixed inset-0 z-40 hidden">
             <div class="fixed inset-0 bg-black/50" id="mobile-overlay-backdrop"></div>
             <aside class="glass-sidebar relative z-50 flex h-full min-h-0 w-64 flex-col overflow-hidden shadow-xl">
-                <div class="flex flex-shrink-0 items-center justify-between border-b border-white/10 px-4 py-5">
+                <div class="flex h-20 flex-shrink-0 items-center justify-between border-b border-white/10 px-4">
                     <div class="flex items-center gap-3">
                         @if(isset($logoPath) && $logoPath)
                             <img src="{{ asset($logoPath) }}" alt="E-SEWAAN" class="h-9 w-9 min-w-[2.25rem] max-h-9 max-w-9 rounded-xl object-contain flex-shrink-0 bg-white p-0.5">
@@ -120,6 +123,7 @@
                     @else
                     @include('partials.sidebar-kontrak-sewaan')
                     @endif
+                    @include('partials.sidebar-penampilan')
                 </nav>
                 @include('partials.sidebar-profile-footer')
             </aside>
@@ -127,7 +131,7 @@
 
         {{-- Main content --}}
         <div class="flex-1 flex flex-col min-w-0 overflow-hidden">
-            <header class="glass-header px-4 lg:px-6 py-3 flex items-center justify-between flex-shrink-0">
+            <header class="glass-header flex h-20 flex-shrink-0 items-center justify-between px-4 lg:px-6">
                 <div class="flex items-center gap-3">
                     <button type="button" id="mobile-open-sidebar" class="lg:hidden p-2 rounded-xl glass-subtle hover:bg-white/60 transition-colors">
                         <svg class="w-5 h-5 text-gray-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" /></svg>

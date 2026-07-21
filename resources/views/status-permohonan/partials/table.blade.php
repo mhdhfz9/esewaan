@@ -53,14 +53,10 @@
                         {{ $c->created_at?->format('d/m/Y') ?? '–' }}
                     </td>
                     <td class="px-4 py-3 text-center text-sm text-slate-600">
-                        @php $progressPercent = $c->proceedProgressPercent(); @endphp
+                        @php $progressPercent = $c->overallProgressPercent(); @endphp
                         <div class="mx-auto min-w-[6rem]">
                             <div class="mb-1 flex items-center justify-between gap-2 text-xs">
-                                @if($c->isReadyToSendToHq() || $c->isPendingHqReview())
-                                    <span class="{{ $c->adminListProgressPercentClass() }}">100%</span>
-                                @else
-                                    <span class="{{ $c->adminListProgressPercentClass() }}">{{ $progressPercent }}%</span>
-                                @endif
+                                <span class="{{ $c->adminListProgressPercentClass() }}">{{ $progressPercent }}%</span>
                             </div>
                             <div class="glass-progress-track h-1.5 overflow-hidden rounded-full">
                                 <div

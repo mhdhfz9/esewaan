@@ -1038,6 +1038,31 @@ test('review page shows progress stepper reflecting current stage', function () 
         ->and($steps[5]['state'])->toBe('upcoming');
 });
 
+test('status list kemajuan uses overall lifecycle progress not proceed-only percent', function () {
+    $admin = User::factory()->create(['role' => 'admin_hq']);
+
+    $pendingProceed = createStatusListContract('Johor', RentalContract::WORKFLOW_MENUNGGU_PROCEED_NEGERI);
+    $pendingHq = createStatusListContract('Johor', RentalContract::WORKFLOW_MENUNGGU_SEMAKAN_HQ);
+    $draftPrep = createStatusListContract('Johor', RentalContract::WORKFLOW_PENYEDIAAN_DRAF_PERJANJIAN);
+    $returned = createStatusListContract('Johor', RentalContract::WORKFLOW_DRAF_DIKEMBALIKAN_HQ);
+    $completed = createStatusListContract('Johor', RentalContract::WORKFLOW_MENUNGGU_SEMAKAN_NEGERI);
+
+    expect($pendingProceed->overallProgressPercent())->toBe(0)
+        ->and($pendingHq->overallProgressPercent())->toBe(20)
+        ->and($draftPrep->overallProgressPercent())->toBe(40)
+        ->and($returned->overallProgressPercent())->toBe(80)
+        ->and($completed->overallProgressPercent())->toBe(100)
+        ->and($pendingHq->adminListProgressWidthPercent())->toBe(20);
+
+    $this->actingAs($admin)
+        ->get(route('status-permohonan.index'))
+        ->assertSuccessful()
+        ->assertSee('20%')
+        ->assertSee('40%')
+        ->assertSee('80%')
+        ->assertSee('100%');
+});
+
 test('admin hq sees three finalize checkboxes on returned draft review page', function () {
     $admin = User::factory()->create(['role' => 'admin_hq']);
     $contract = createStatusListContract('Melaka', RentalContract::WORKFLOW_DRAF_DIKEMBALIKAN_HQ);

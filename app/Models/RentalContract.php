@@ -630,12 +630,18 @@ class RentalContract extends Model
 
     public function adminListProgressPercentClass(): string
     {
-        if ($this->isReadyToSendToHq()) {
+        $progressPercent = $this->overallProgressPercent();
+
+        if ($progressPercent >= 100) {
             return 'font-medium text-emerald-700';
         }
 
-        if ($this->isPendingHqReview()) {
+        if ($this->isPendingHqReview() || $this->isInDraftAgreementStage()) {
             return 'font-medium text-indigo-700';
+        }
+
+        if ($progressPercent > 0) {
+            return 'font-medium text-amber-700';
         }
 
         return 'font-medium text-slate-700';
@@ -643,14 +649,14 @@ class RentalContract extends Model
 
     public function adminListProgressBarFillClass(): string
     {
-        $progressPercent = $this->proceedProgressPercent();
+        $progressPercent = $this->overallProgressPercent();
 
-        if ($this->isPendingHqReview()) {
-            return 'glass-progress-fill-indigo';
+        if ($progressPercent >= 100) {
+            return 'glass-progress-fill-emerald';
         }
 
-        if ($this->isReadyToSendToHq() || $progressPercent >= 100) {
-            return 'glass-progress-fill-emerald';
+        if ($this->isPendingHqReview() || $this->isInDraftAgreementStage()) {
+            return 'glass-progress-fill-indigo';
         }
 
         if ($progressPercent > 0) {
@@ -662,11 +668,33 @@ class RentalContract extends Model
 
     public function adminListProgressWidthPercent(): int
     {
-        if ($this->isReadyToSendToHq() || $this->isPendingHqReview()) {
+        return $this->overallProgressPercent();
+    }
+
+    /**
+     * Overall application progress across the full lifecycle (not just negeri proceed steps).
+     */
+    public function overallProgressPercent(): int
+    {
+        $totalSteps = count($this->draftAgreementProgressSteps());
+        $maxIndex = max(1, $totalSteps - 1);
+        $currentIndex = $this->draftAgreementCurrentStepIndex();
+
+        if ($this->isHqApproved() || $currentIndex >= $maxIndex) {
             return 100;
         }
 
-        return $this->proceedProgressPercent();
+        $segmentSize = 100 / $maxIndex;
+
+        if ($currentIndex === 0) {
+            $proceedPercent = $this->isReadyToSendToHq()
+                ? 100
+                : min(100, $this->proceedProgressPercent());
+
+            return (int) round(($proceedPercent / 100) * $segmentSize);
+        }
+
+        return (int) round(($currentIndex / $maxIndex) * 100);
     }
 
     public function applicationStatusLabel(?User $viewer = null): string

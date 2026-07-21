@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\AdminProceedController;
+use App\Http\Controllers\AppearanceController;
 use App\Http\Controllers\Auth\AuthController;
 use App\Http\Controllers\ContractDocumentController;
 use App\Http\Controllers\ContractFollowUpController;
@@ -67,4 +68,6 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/profil', [ProfileController::class, 'show'])->name('profile.show');
     Route::get('/profil/kemaskini', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::put('/profil', [ProfileController::class, 'update'])->name('profile.update');
+
+    Route::get('/penampilan', [AppearanceController::class, 'show'])->name('penampilan.show');
 });

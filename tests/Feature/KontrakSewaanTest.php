@@ -197,14 +197,35 @@ test('kontrak sewaan show displays hq jrp checklist with dates for admin negeri'
                 \App\Support\HqJrpChecklist::AADK_RECEIVE_BPH_APPROVAL => '2026-07-16',
             ],
         ],
+        'remark' => 'Catatan ujian kontrak',
+        'semakan_count' => 2,
+        'keluasan_mp' => 120.5,
+    ]);
+    $contract->premise->update([
+        'nama_pemilik' => 'Pemilik Ujian',
+        'jenis_bangunan' => 'pejabat',
     ]);
 
     $this->actingAs($admin)
         ->get(route('kontrak-sewaan.show', $contract))
         ->assertSuccessful()
+        ->assertSee('Maklumat Asas')
+        ->assertSee('Maklumat Premis & Pemilik', false)
+        ->assertSee('Maklumat Kontrak')
+        ->assertSee('Kemajuan Permohonan')
+        ->assertSee('Permohonan Baru')
+        ->assertSee('Semakan HQ')
+        ->assertSee('Selesai')
+        ->assertSee('Pemilik Ujian')
+        ->assertSee('Catatan ujian kontrak')
+        ->assertSee('Langkah Tindakan Pegawai Negeri')
         ->assertSee('Pengesahan HQ')
         ->assertSee('Kelulusan Pengurusan Tertinggi')
         ->assertSee('Cawangan Pembangunan AADK menerima ulasan daripada EPU melalui KDN')
         ->assertSee('Cawangan Pembangunan AADK menerima ulasan daripada MOF melalui KDN')
-        ->assertSee('16/07/2026');
+        ->assertSee('16/07/2026')
+        ->assertSee('Status Draf Perjanjian')
+        ->assertSee('Semakan 2')
+        ->assertSee('Pengesahan & Tandatangan', false)
+        ->assertSee('Permohonan telah selesai dan dimasukkan ke dalam Senarai Kontrak Sewaan');
 });
