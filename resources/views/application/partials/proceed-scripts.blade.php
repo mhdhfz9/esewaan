@@ -80,7 +80,7 @@
         return `${year}-${month}-${day}`;
     }
 
-    function syncAgencyDateVisibility(checkbox) {
+    function syncAgencyDateVisibility(checkbox, autoSetToday = false) {
         if (!checkbox?.dataset.requiresDate) {
             return;
         }
@@ -101,7 +101,7 @@
             return;
         }
 
-        if (!dateInput.value) {
+        if (autoSetToday || !dateInput.value) {
             dateInput.value = todayDateValue();
         }
     }
@@ -157,7 +157,14 @@
             const checkbox = panel.querySelector('.proceed-step-completed');
             const accurateCheckbox = panel.querySelector('.proceed-step-confirmed-accurate');
             const promisCheckbox = panel.querySelector('.proceed-step-confirmed-promis');
+            const accurateChecked = accurateCheckbox?.checked ?? false;
+            const promisChecked = promisCheckbox?.checked ?? false;
+            const completedChecked = panel.dataset.confirmationsCompleteStep === '1'
+                ? accurateChecked && promisChecked
+                : (checkbox?.checked ?? false);
             const notes = panel.querySelector('.proceed-step-notes');
+            const noRujukan = panel.querySelector('.proceed-step-no-rujukan');
+            const tarikhSurat = panel.querySelector('.proceed-step-tarikh-surat');
             const agencies = {};
             const agencyDates = {};
 
@@ -174,10 +181,12 @@
             });
 
             steps[key] = {
-                completed: checkbox?.checked ? '1' : '0',
-                confirmed_accurate: accurateCheckbox?.checked ? '1' : '0',
-                confirmed_promis: promisCheckbox?.checked ? '1' : '0',
+                completed: completedChecked ? '1' : '0',
+                confirmed_accurate: accurateChecked ? '1' : '0',
+                confirmed_promis: promisChecked ? '1' : '0',
                 notes: notes?.value ?? '',
+                no_rujukan: noRujukan?.value ?? '',
+                tarikh_surat: tarikhSurat?.value ?? '',
                 agencies,
                 agency_dates: agencyDates,
             };
@@ -192,6 +201,8 @@
             formData.append(`proceed_steps[${key}][confirmed_accurate]`, value.confirmed_accurate);
             formData.append(`proceed_steps[${key}][confirmed_promis]`, value.confirmed_promis);
             formData.append(`proceed_steps[${key}][notes]`, value.notes);
+            formData.append(`proceed_steps[${key}][no_rujukan]`, value.no_rujukan);
+            formData.append(`proceed_steps[${key}][tarikh_surat]`, value.tarikh_surat);
             Object.entries(value.agencies).forEach(([agencyKey, checked]) => {
                 formData.append(`proceed_steps[${key}][agencies][${agencyKey}]`, checked);
             });
@@ -206,17 +217,130 @@
             return false;
         }
 
-        const completed = panel.querySelector('.proceed-step-completed')?.checked ?? false;
+        const completed = panel.dataset.confirmationsCompleteStep === '1'
+            ? true
+            : (panel.querySelector('.proceed-step-completed')?.checked ?? false);
         const accurate = panel.querySelector('.proceed-step-confirmed-accurate')?.checked ?? false;
         const promis = panel.querySelector('.proceed-step-confirmed-promis')?.checked ?? false;
+        const noRujukanInput = panel.querySelector('.proceed-step-no-rujukan');
+        const tarikhSuratInput = panel.querySelector('.proceed-step-tarikh-surat');
+        const noRujukan = (noRujukanInput?.value ?? '').trim();
+        const tarikhSurat = (tarikhSuratInput?.value ?? '').trim();
+        const referenceOk = (!noRujukanInput || Boolean(noRujukan))
+            && (!tarikhSuratInput || Boolean(tarikhSurat));
 
-        if (!completed || !accurate || !promis) {
+        if (!completed || !accurate || !promis || !referenceOk) {
             return false;
         }
 
         if (panel.dataset.requiresAgencies === '1') {
             return agenciesReady(panel);
         }
+
+        return true;
+    }
+
+    const ERROR_CLASS = 'glass-input-required-error';
+    const CHECKBOX_ERROR_CLASS = 'proceed-required-error';
+    const INCOMPLETE_REQUIRED_MESSAGE = 'Sila lengkapkan semua ruangan yang wajib diisi.';
+
+    function findFirstIncompleteStepNumber() {
+        for (const stepNumber of activeSteps) {
+            const panel = form.querySelector(`.proceed-step-panel[data-step="${stepNumber}"]`);
+
+            if (!isPanelStepComplete(panel)) {
+                return Number(stepNumber);
+            }
+        }
+
+        return null;
+    }
+
+    function clearProceedRequiredHighlights(root = form) {
+        root.querySelectorAll(`.${ERROR_CLASS}`).forEach((field) => {
+            if (field.matches('.proceed-step-no-rujukan, .proceed-step-tarikh-surat, .proceed-agency-date')) {
+                field.classList.remove(ERROR_CLASS);
+            }
+        });
+        root.querySelectorAll(`.${CHECKBOX_ERROR_CLASS}`).forEach((element) => {
+            element.classList.remove(CHECKBOX_ERROR_CLASS);
+        });
+    }
+
+    function highlightIncompletePanel(panel) {
+        if (!panel) {
+            return;
+        }
+
+        clearProceedRequiredHighlights(panel);
+
+        const noRujukan = panel.querySelector('.proceed-step-no-rujukan');
+        if (noRujukan && !(noRujukan.value || '').trim()) {
+            noRujukan.classList.add(ERROR_CLASS);
+        }
+
+        const tarikhSurat = panel.querySelector('.proceed-step-tarikh-surat');
+        if (tarikhSurat && !(tarikhSurat.value || '').trim()) {
+            tarikhSurat.classList.add(ERROR_CLASS);
+        }
+
+        [
+            '.proceed-step-confirmed-accurate',
+            '.proceed-step-confirmed-promis',
+            '.proceed-step-completed',
+        ].forEach((selector) => {
+            const checkbox = panel.querySelector(selector);
+            if (checkbox && !checkbox.checked) {
+                checkbox.closest('.proceed-step-checkbox-label')?.classList.add(CHECKBOX_ERROR_CLASS);
+            }
+        });
+
+        if (panel.dataset.requiresAgencies === '1' && !agenciesReady(panel)) {
+            panel.querySelector('.proceed-agency-checklist')?.classList.add(CHECKBOX_ERROR_CLASS);
+
+            panel.querySelectorAll('.proceed-agency-checkbox').forEach((checkbox) => {
+                if (!checkbox.checked) {
+                    return;
+                }
+
+                if (checkbox.dataset.requiresDate !== '1') {
+                    return;
+                }
+
+                const dateInput = panel.querySelector(
+                    `.proceed-agency-date-wrap[data-agency-date-for="${checkbox.dataset.agencyKey}"] .proceed-agency-date`
+                );
+
+                if (dateInput && !(dateInput.value || '').trim()) {
+                    dateInput.classList.add(ERROR_CLASS);
+                }
+            });
+
+            updateAgencyConfirmation(panel);
+        }
+
+        const focusTarget = panel.querySelector(`.${ERROR_CLASS}`)
+            || panel.querySelector(`.${CHECKBOX_ERROR_CLASS} input`)
+            || panel.querySelector(`.${CHECKBOX_ERROR_CLASS}`);
+
+        focusTarget?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+        if (focusTarget?.matches('input, textarea, select')) {
+            focusTarget.focus({ preventScroll: true });
+        }
+    }
+
+    function redirectToFirstIncompleteRequiredStep() {
+        const incompleteStep = findFirstIncompleteStepNumber();
+
+        if (incompleteStep === null) {
+            return false;
+        }
+
+        currentStep = incompleteStep;
+        updateStepperUi(currentStep, calculateLocalProgress());
+        highlightIncompletePanel(form.querySelector(`.proceed-step-panel[data-step="${incompleteStep}"]`));
+        showStatus(formSaveStatus, INCOMPLETE_REQUIRED_MESSAGE);
 
         return true;
     }
@@ -274,6 +398,8 @@
         const accurateCheckbox = panel.querySelector('.proceed-step-confirmed-accurate');
         const promisCheckbox = panel.querySelector('.proceed-step-confirmed-promis');
         const notes = panel.querySelector('.proceed-step-notes');
+        const noRujukan = panel.querySelector('.proceed-step-no-rujukan');
+        const tarikhSurat = panel.querySelector('.proceed-step-tarikh-surat');
 
         if (checkbox) {
             checkbox.checked = state.marked_complete !== undefined
@@ -291,6 +417,14 @@
 
         if (notes && state.notes !== undefined) {
             notes.value = state.notes ?? '';
+        }
+
+        if (noRujukan && state.no_rujukan !== undefined) {
+            noRujukan.value = state.no_rujukan ?? '';
+        }
+
+        if (tarikhSurat && state.tarikh_surat !== undefined) {
+            tarikhSurat.value = state.tarikh_surat ?? '';
         }
 
         if (state.agencies) {
@@ -432,7 +566,7 @@
 
             const readyStatus = document.getElementById('proceed-ready-status');
             if (readyStatus) {
-                readyStatus.textContent = 'Permohonan sedia untuk dihantar ke HQ';
+                readyStatus.textContent = 'Permohonan sedia untuk dihantar ke Ibu Pejabat';
                 readyStatus.classList.toggle('hidden', !isComplete);
             }
         }
@@ -603,7 +737,8 @@
     form.querySelectorAll('.proceed-agency-checkbox').forEach((field) => {
         syncAgencyDateVisibility(field);
         field.addEventListener('change', () => {
-            syncAgencyDateVisibility(field);
+            syncAgencyDateVisibility(field, field.checked);
+            clearProceedRequiredHighlights(field.closest('.proceed-step-panel') ?? form);
             updateAllAgencyConfirmations();
             handleProceedFieldChange(true);
         });
@@ -611,10 +746,12 @@
 
     form.querySelectorAll('.proceed-agency-date').forEach((field) => {
         field.addEventListener('change', () => {
+            field.classList.remove(ERROR_CLASS);
             updateAllAgencyConfirmations();
             handleProceedFieldChange(true);
         });
         field.addEventListener('input', () => {
+            field.classList.remove(ERROR_CLASS);
             updateAllAgencyConfirmations();
             updateStepperUi(currentStep, calculateLocalProgress());
             scheduleAutosave(false);
@@ -622,12 +759,19 @@
     });
 
     form.querySelectorAll('.proceed-step-completed, .proceed-step-confirmed-accurate, .proceed-step-confirmed-promis').forEach((field) => {
-        field.addEventListener('change', () => handleProceedFieldChange(true));
+        field.addEventListener('change', () => {
+            clearProceedRequiredHighlights(field.closest('.proceed-step-panel') ?? form);
+            handleProceedFieldChange(true);
+        });
     });
 
-    form.querySelectorAll('.proceed-step-notes').forEach((field) => {
-        field.addEventListener('change', () => handleProceedFieldChange(true));
+    form.querySelectorAll('.proceed-step-notes, .proceed-step-no-rujukan, .proceed-step-tarikh-surat').forEach((field) => {
+        field.addEventListener('change', () => {
+            clearProceedRequiredHighlights(field.closest('.proceed-step-panel') ?? form);
+            handleProceedFieldChange(true);
+        });
         field.addEventListener('input', () => {
+            field.classList.remove(ERROR_CLASS);
             updateStepperUi(currentStep, calculateLocalProgress());
             scheduleAutosave(false);
         });
@@ -714,8 +858,12 @@
         saveButton.addEventListener('click', (event) => {
             event.preventDefault();
 
+            if (isLastStep(currentStep) && redirectToFirstIncompleteRequiredStep()) {
+                return;
+            }
+
             if (window.ApplicationFormValidation && !window.ApplicationFormValidation.validate(form)) {
-                showStatus(formSaveStatus, 'Sila lengkapkan semua medan bertanda biru/merah sebelum teruskan.');
+                showStatus(formSaveStatus, INCOMPLETE_REQUIRED_MESSAGE);
                 return;
             }
 

@@ -39,13 +39,16 @@ class HqJrpChecklist
     }
 
     /**
-     * Checklist items 4–7 that record a date when checked.
+     * Checklist items that record a date when checked.
      *
      * @return list<string>
      */
     public static function keysRequiringDate(): array
     {
         return [
+            self::KP,
+            self::MOF,
+            self::EPU,
             self::AADK_RECEIVE_EPU_COMMENTS,
             self::AADK_RECEIVE_MOF_COMMENTS,
             self::AADK_SUBMIT_BPH,
@@ -66,8 +69,8 @@ class HqJrpChecklist
         return [
             self::KP => 'Kelulusan Pengurusan Tertinggi',
             self::MOF => 'Pejabat Belanjawan Negeri, Kementerian Kewangan Malaysia (MOF) — untuk permohonan yang ada kenaikan kadar sewa (≥ RM500)',
-            self::EPU => 'Cawangan Perancangan Ekonomi (EPU) Jabatan Perdana Menteri (jika keluasan melebihi 465 mps) — untuk permohonan perpindahan ruang pejabat / ruang pejabat baharu',
-            self::AADK_RECEIVE_EPU_COMMENTS => 'Cawangan Pembangunan AADK menerima ulasan daripada EPU melalui KDN',
+            self::EPU => 'Kementerian Ekonomi (KE) (jika keluasan melebihi 465 mps) — untuk permohonan perpindahan ruang pejabat / ruang pejabat baharu',
+            self::AADK_RECEIVE_EPU_COMMENTS => 'Cawangan Pembangunan AADK menerima ulasan daripada Kementerian Ekonomi (KE)',
             self::AADK_RECEIVE_MOF_COMMENTS => 'Cawangan Pembangunan AADK menerima ulasan daripada MOF melalui KDN',
             self::AADK_SUBMIT_BPH => 'Cawangan Pembangunan AADK mengemukakan permohonan Bahagian Hartanah (BPH) Jabatan Perdana Menteri untuk mendapatkan kelulusan',
             self::AADK_RECEIVE_BPH_APPROVAL => 'Cawangan Pembangunan AADK terima surat kelulusan daripada BPH',

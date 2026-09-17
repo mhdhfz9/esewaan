@@ -19,17 +19,26 @@ class KontrakSewaanController extends Controller
     public function index(Request $request): View
     {
         $search = trim((string) $request->input('search', ''));
-        $contracts = $this->contractsQuery($request->user(), $search)
+        $tab = $request->input('tab', 'active');
+        $tab = in_array($tab, ['active', 'history'], true) ? $tab : 'active';
+
+        $contracts = ($tab === 'history'
+            ? $this->historyQuery($request->user(), $search)
+            : $this->activeQuery($request->user(), $search))
             ->paginate(15)
             ->withQueryString();
 
         $payload = [
             'contracts' => $contracts,
             'search' => $search,
+            'tab' => $tab,
         ];
 
         if ($this->wantsTablePartial($request)) {
-            return view('kontrak-sewaan.partials.table', $payload);
+            return view(
+                $tab === 'history' ? 'kontrak-sewaan.partials.history-table' : 'kontrak-sewaan.partials.table',
+                $payload,
+            );
         }
 
         return view('kontrak-sewaan.index', $payload);
@@ -39,7 +48,7 @@ class KontrakSewaanController extends Controller
     {
         $this->ensureCanView($request, $contract);
 
-        $contract->loadMissing(['premise', 'submittedBy', 'adminNegeriUser', 'parentContract.premise']);
+        $contract->loadMissing(['premise', 'submittedBy', 'adminNegeriUser', 'parentContract.premise', 'documents.user']);
         app(SidebarNotificationService::class)->markContractAsViewed($request->user(), $contract);
         $proceedData = AdminProceedSteps::viewData($contract, 1);
 
@@ -53,7 +62,7 @@ class KontrakSewaanController extends Controller
     /**
      * @return Builder<RentalContract>
      */
-    private function contractsQuery(User $user, string $search): Builder
+    private function baseQuery(User $user, string $search): Builder
     {
         return RentalContract::query()
             ->hqApproved()
@@ -71,8 +80,39 @@ class KontrakSewaanController extends Controller
             )
             ->tap(fn (Builder $query) => RentalContractListSearch::apply($query, $search, [
                 'include_admin_negeri' => true,
-            ]))
-            ->orderForUserList($user, 'hq_approved_at');
+            ]));
+    }
+
+    /**
+     * @return Builder<RentalContract>
+     */
+    private function activeQuery(User $user, string $search): Builder
+    {
+        $placeholder = RentalContract::PLACEHOLDER_CONTRACT_DATE;
+
+        return $this->baseQuery($user, $search)
+            ->kontrakNotExpired()
+            ->orderByRaw(
+                'CASE WHEN tarikh_mula = ? THEN COALESCE(sah_sehingga, \'9999-12-31\') ELSE COALESCE(tarikh_tamat, \'9999-12-31\') END ASC',
+                [$placeholder]
+            )
+            ->orderBy('rental_contracts.id');
+    }
+
+    /**
+     * @return Builder<RentalContract>
+     */
+    private function historyQuery(User $user, string $search): Builder
+    {
+        $placeholder = RentalContract::PLACEHOLDER_CONTRACT_DATE;
+
+        return $this->baseQuery($user, $search)
+            ->kontrakExpired()
+            ->orderByRaw(
+                'COALESCE(CASE WHEN tarikh_mula = ? THEN sah_sehingga ELSE tarikh_tamat END, tarikh_tamat) DESC',
+                [$placeholder]
+            )
+            ->orderByDesc('rental_contracts.id');
     }
 
     private function ensureCanView(Request $request, RentalContract $contract): void

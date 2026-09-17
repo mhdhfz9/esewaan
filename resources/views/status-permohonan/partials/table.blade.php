@@ -10,7 +10,7 @@
     <table class="w-full min-w-[48rem] text-sm">
         <thead>
             <tr class="glass-divider border-b">
-                <th class="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wide text-gray-500">Negeri</th>
+                <th class="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wide text-gray-500">Nama Pemohon</th>
                 <th class="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wide text-gray-500">Kategori Permohonan</th>
                 <th class="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wide text-gray-500">Negeri</th>
                 <th class="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wide text-gray-500">Status</th>
@@ -25,7 +25,7 @@
                     $adminNegeriName = $c->displayAdminNegeriName();
                     $confirmWithdrawalReason = filled($c->withdrawal_reason) ? $c->withdrawal_reason : '';
                 @endphp
-                <tr class="{{ $c->adminListRowClasses(auth()->user()) }} transition-colors">
+                <tr class="{{ $c->adminListRowClasses(auth()->user()) }}">
                     <td class="px-4 py-3 text-center text-sm font-semibold text-slate-800">{{ $adminNegeriName }}</td>
                     <td class="px-4 py-3 text-center text-sm text-slate-600">
                         {{ \App\Support\ApplicationCategories::label($c->kategori_permohonan) }}
@@ -36,7 +36,7 @@
                             @if(auth()->user()->isAdminHq() && $c->hasPendingWithdrawalRequest())
                                 <!-- <span
                                     class="inline-flex shrink-0 items-center justify-center rounded-full bg-amber-100 p-1 text-amber-600"
-                                    title="Permohonan tarik semula menunggu kelulusan HQ"
+                                    title="Permohonan tarik semula menunggu kelulusan Ibu Pejabat"
                                 >
                                     <span class="sr-only">Permohonan tarik semula menunggu kelulusan</span>
                                     <svg class="h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
@@ -79,15 +79,15 @@
                                         @csrf
                                         <button
                                             type="button"
-                                            title="Hantar ke Admin"
+                                            title="Hantar ke Ibu Pejabat"
                                             class="status-confirm-trigger rounded-lg p-2 text-slate-500 transition-colors hover:bg-emerald-50 hover:text-emerald-600"
-                                            data-confirm-title="Hantar Permohonan ke Admin"
-                                            data-confirm-message="Anda pasti mahu menghantar permohonan ini kepada Admin untuk semakan? Sila semak maklumat premis sebelum meneruskan."
+                                            data-confirm-title="Hantar Permohonan ke Ibu Pejabat"
+                                            data-confirm-message="Anda pasti mahu menghantar permohonan ini kepada Ibu Pejabat untuk semakan? Sila semak maklumat premis sebelum meneruskan."
                                             data-confirm-form="submit-hq-form-{{ $c->id }}"
                                             data-confirm-button="Ya, Hantar"
                                             data-confirm-tone="success"
                                         >
-                                            <span class="sr-only">Hantar ke Admin</span>
+                                            <span class="sr-only">Hantar ke Ibu Pejabat</span>
                                             <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
                                             </svg>
@@ -144,7 +144,7 @@
                                             title="Mohon Tarik Semula"
                                             class="status-confirm-trigger rounded-lg p-2 text-slate-500 transition-colors hover:bg-amber-50 hover:text-amber-600"
                                             data-confirm-title="Mohon Tarik Semula"
-                                            data-confirm-message="Permohonan ini akan dihantar kepada HQ untuk kelulusan tarik semula. Sila nyatakan alasan di bawah."
+                                            data-confirm-message="Permohonan ini akan dihantar kepada Ibu Pejabat untuk kelulusan tarik semula. Sila nyatakan alasan di bawah."
                                             data-confirm-form="withdrawal-form-{{ $c->id }}"
                                             data-confirm-button="Hantar Permohonan"
                                             data-confirm-tone="danger"
@@ -224,7 +224,7 @@
                                             title="Tolak Permohonan Tarik Semula"
                                             class="status-confirm-trigger rounded-lg p-2 text-slate-500 transition-colors hover:bg-red-50 hover:text-red-600"
                                             data-confirm-title="Tolak Permohonan Tarik Semula"
-                                            data-confirm-message="Permohonan akan kekal dalam senarai semakan HQ. Anda pasti mahu menolak permohonan tarik semula ini?"
+                                            data-confirm-message="Permohonan akan kekal dalam senarai semakan Ibu Pejabat. Anda pasti mahu menolak permohonan tarik semula ini?"
                                             data-confirm-withdrawal-reason="{{ $confirmWithdrawalReason }}"
                                             data-confirm-form="reject-withdrawal-form-{{ $c->id }}"
                                             data-confirm-button="Ya, Tolak"
@@ -236,64 +236,6 @@
                                             </svg>
                                         </button>
                                     </form>
-                                @elseif($c->isAwaitingHqDraftAction())
-                                <a
-                                    href="{{ route('status-permohonan.review', $c) }}"
-                                    title="Semak"
-                                    class="rounded-lg p-2 text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-800"
-                                >
-                                    <span class="sr-only">Semak</span>
-                                    <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                                    </svg>
-                                </a>
-                                <form
-                                    id="send-puu-form-{{ $c->id }}"
-                                    method="POST"
-                                    action="{{ route('status-permohonan.send-puu', $c) }}"
-                                    class="inline"
-                                >
-                                    @csrf
-                                    <button
-                                        type="button"
-                                        title="Hantar ke PUU"
-                                        class="status-confirm-trigger rounded-lg p-2 text-slate-500 transition-colors hover:bg-indigo-50 hover:text-indigo-600"
-                                        data-confirm-title="Hantar ke PUU"
-                                        data-confirm-message="Permohonan ini akan dihantar ke PUU untuk semakan. Teruskan?"
-                                        data-confirm-form="send-puu-form-{{ $c->id }}"
-                                        data-confirm-button="Ya, Hantar"
-                                        data-confirm-tone="success"
-                                    >
-                                        <span class="sr-only">Hantar ke PUU</span>
-                                        <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
-                                        </svg>
-                                    </button>
-                                </form>
-                                <form
-                                    id="complete-draft-form-{{ $c->id }}"
-                                    method="POST"
-                                    action="{{ route('status-permohonan.complete', $c) }}"
-                                    class="inline"
-                                >
-                                    @csrf
-                                    <button
-                                        type="button"
-                                        title="Selesai"
-                                        class="status-confirm-trigger rounded-lg p-2 text-slate-500 transition-colors hover:bg-emerald-50 hover:text-emerald-600"
-                                        data-confirm-title="Selesai"
-                                        data-confirm-message="Draf perjanjian akan diluluskan tanpa pindaan dan dikembalikan kepada Negeri untuk penyediaan dokumen. Teruskan?"
-                                        data-confirm-form="complete-draft-form-{{ $c->id }}"
-                                        data-confirm-button="Ya, Selesai"
-                                        data-confirm-tone="success"
-                                    >
-                                        <span class="sr-only">Selesai</span>
-                                        <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                        </svg>
-                                    </button>
-                                </form>
                                 @elseif($c->isInDraftAgreementStage())
                                 <a
                                     href="{{ route('status-permohonan.review', $c) }}"
@@ -335,7 +277,7 @@
                                     title="Padam"
                                     class="status-confirm-trigger rounded-lg p-2 text-slate-500 transition-colors hover:bg-red-50 hover:text-red-600"
                                     data-confirm-title="Padam Permohonan"
-                                    data-confirm-message="Permohonan akan dipindahkan ke tab Sejarah HQ. Sila nyatakan alasan padam di bawah."
+                                    data-confirm-message="Permohonan akan dipindahkan ke tab Sejarah Ibu Pejabat. Sila nyatakan alasan padam di bawah."
                                     data-confirm-form="delete-form-{{ $c->id }}"
                                     data-confirm-button="Ya, Padam"
                                     data-confirm-tone="danger"

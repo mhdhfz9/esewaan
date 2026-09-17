@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\RentalContract;
+use App\Support\StatusTindakan;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -25,13 +26,13 @@ class DashboardController extends Controller
             ->where('workflow_tahap', RentalContract::WORKFLOW_MENUNGGU_SEMAKAN_HQ)
             ->count();
 
-        $progressPermohonan = RentalContract::query()
-            ->whereIn('workflow_tahap', RentalContract::draftAgreementWorkflows())
-            ->count();
+        $dalamTindakanByStatus = collect(StatusTindakan::breakdownWithCounts());
+        $progressPermohonan = (int) $dalamTindakanByStatus->sum('count');
 
         $activeContracts = RentalContract::query()
             ->hqApproved()
             ->notSuperseded()
+            ->kontrakNotExpired()
             ->with('premise')
             ->get();
 
@@ -50,6 +51,7 @@ class DashboardController extends Controller
         return view('dashboard.index', [
             'permohonanBaharu' => $permohonanBaharu,
             'progressPermohonan' => $progressPermohonan,
+            'dalamTindakanByStatus' => $dalamTindakanByStatus,
             'kontrakAktif' => $kontrakAktif,
             'kontrakLapanBulan' => $kontrakLapanBulan,
             'alertList' => $alertList,

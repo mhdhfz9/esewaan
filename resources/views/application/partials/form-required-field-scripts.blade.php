@@ -50,8 +50,6 @@ window.ApplicationFormValidation = window.ApplicationFormValidation || (function
 
         if (form?.classList.contains(FORM_ERROR_CLASS)) {
             field.classList.add(ERROR_CLASS);
-        } else {
-            field.classList.add(EMPTY_CLASS);
         }
     }
 
@@ -70,15 +68,11 @@ window.ApplicationFormValidation = window.ApplicationFormValidation || (function
         requiredFields(form).forEach((field) => {
             clearFieldState(field);
 
-            if (!isFieldEmpty(field)) {
+            if (!isFieldEmpty(field) || !showErrors) {
                 return;
             }
 
-            if (showErrors) {
-                field.classList.add(ERROR_CLASS);
-            } else {
-                field.classList.add(EMPTY_CLASS);
-            }
+            field.classList.add(ERROR_CLASS);
         });
 
         if (emptyFields.length > 0 && showErrors) {

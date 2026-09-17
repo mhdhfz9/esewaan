@@ -36,6 +36,8 @@ class SaveAdminProceedRequest extends FormRequest
             'proceed_steps.*.confirmed_accurate' => ['sometimes', 'boolean'],
             'proceed_steps.*.confirmed_promis' => ['sometimes', 'boolean'],
             'proceed_steps.*.notes' => ['nullable', 'string', 'max:2000'],
+            'proceed_steps.*.no_rujukan' => ['nullable', 'string', 'max:100'],
+            'proceed_steps.*.tarikh_surat' => ['nullable', 'date'],
             'proceed_steps.*.agencies' => ['sometimes', 'array'],
             'proceed_steps.*.agencies.*' => ['sometimes', 'boolean'],
             'proceed_steps.*.agency_dates' => ['sometimes', 'array'],

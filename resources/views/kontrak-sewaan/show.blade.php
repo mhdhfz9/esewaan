@@ -26,7 +26,7 @@
                 <p class="mt-0.5 text-sm text-slate-800">{{ $p?->negeri ?? '–' }}</p>
             </div>
             <div>
-                <p class="text-[11px] font-semibold uppercase tracking-wide text-gray-500">Pegawai Negeri</p>
+                <p class="text-[11px] font-semibold uppercase tracking-wide text-gray-500">Nama Pemohon</p>
                 <p class="mt-0.5 text-sm font-semibold text-slate-800">{{ $contract->displayAdminNegeriName() }}</p>
             </div>
         </div>
@@ -59,7 +59,11 @@
                 <p class="mt-0.5 text-slate-800">{{ $contract->keluasan_mp ? number_format((float) $contract->keluasan_mp * 10.7639, 2) : '–' }}</p>
             </div>
             <div>
-                <p class="text-[11px] font-semibold uppercase tracking-wide text-gray-500">Sah Sehingga</p>
+                <p class="text-[11px] font-semibold uppercase tracking-wide text-gray-500">Tarikh Mula</p>
+                <p class="mt-0.5 text-slate-800">{{ $contract->tarikh_mula_tawaran?->format('d/m/Y') ?? '–' }}</p>
+            </div>
+            <div>
+                <p class="text-[11px] font-semibold uppercase tracking-wide text-gray-500">Tarikh Akhir Tempoh Tawaran Penyewaan</p>
                 <p class="mt-0.5 text-slate-800">{{ $contract->sah_sehingga?->format('d/m/Y') ?? '–' }}</p>
             </div>
             <div>
@@ -80,7 +84,7 @@
         </div>
         <div class="grid grid-cols-1 gap-3 px-4 py-3 text-sm md:grid-cols-2 lg:grid-cols-3">
             <div>
-                <p class="text-[11px] font-semibold uppercase tracking-wide text-gray-500">Tarikh Disahkan HQ</p>
+                <p class="text-[11px] font-semibold uppercase tracking-wide text-gray-500">Tarikh Disahkan Ibu Pejabat</p>
                 <p class="mt-0.5 text-slate-800">{{ $contract->hq_approved_at?->format('d/m/Y') ?? '–' }}</p>
             </div>
             <div>
@@ -114,12 +118,12 @@
         </div>
     </section>
 
-    <section class="glass-card overflow-hidden">
+    <section class="glass-card">
         <div class="glass-divider-soft border-b px-4 py-3">
             <h2 class="text-base font-semibold text-slate-900">Kemajuan Permohonan</h2>
             <p class="mt-0.5 text-xs text-slate-500">Ringkasan peringkat permohonan sehingga kontrak sewaan.</p>
         </div>
-        <div class="px-4 py-5">
+        <div class="overflow-visible px-4 pb-6 pt-4">
             @include('status-permohonan.partials.progress-stepper', ['steps' => $steps])
         </div>
     </section>
@@ -136,7 +140,7 @@
         </section>
     @endif
 
-    @if(filled($contract->remark))
+    @if(filled($contract->remark) && ! $contract->isFollowUpApplication())
         <section class="glass-card overflow-hidden">
             <div class="glass-divider-soft border-b px-4 py-3">
                 <h2 class="text-base font-semibold text-slate-900">Remark</h2>
@@ -169,8 +173,8 @@
 
     <section class="glass-card overflow-hidden">
         <div class="glass-divider-soft border-b px-4 py-3">
-            <h2 class="text-base font-semibold text-slate-900">Pengesahan HQ</h2>
-            <p class="mt-0.5 text-xs text-slate-500">Checklist JRP yang telah direkodkan oleh HQ.</p>
+            <h2 class="text-base font-semibold text-slate-900">Pengesahan Ibu Pejabat</h2>
+            <p class="mt-0.5 text-xs text-slate-500">Checklist JRP yang telah direkodkan oleh Ibu Pejabat.</p>
         </div>
         <div class="px-4 py-3">
             @include('status-permohonan.partials.hq-jrp-checklist-readonly', [
@@ -200,19 +204,43 @@
                     <p class="mt-0.5 text-slate-800">{{ $contract->semakanLabel() }}</p>
                 </div>
             @endif
+            @include('status-permohonan.partials.draft-document-history', ['contract' => $contract])
             <p class="text-sm text-slate-600">
-                Draf perjanjian telah diluluskan dan tindakan Negeri serta pengesahan Admin telah selesai.
+                Draf perjanjian telah diluluskan dan tindakan Negeri serta pengesahan Ibu Pejabat telah selesai.
             </p>
+            <div class="glass-subtle rounded-xl border border-slate-200/60 p-4">
+                <p class="text-sm font-semibold text-slate-900">Tindakan Negeri</p>
+                <p class="mt-0.5 text-xs text-slate-500">Pengesahan yang telah ditandakan.</p>
+                <div class="mt-3">
+                    @include('status-permohonan.partials.negeri-draft-acknowledgements-readonly', [
+                        'contract' => $contract,
+                        'acknowledgementsCompleted' => true,
+                    ])
+                </div>
+            </div>
         </div>
     </section>
 
     <section class="glass-card overflow-hidden">
         <div class="glass-divider-soft border-b px-4 py-3">
             <h2 class="text-base font-semibold text-slate-900">Pengesahan & Tandatangan</h2>
-            <p class="mt-0.5 text-xs text-slate-500">Pengesahan penerimaan dan tandatangan perjanjian oleh Admin.</p>
+            <p class="mt-0.5 text-xs text-slate-500">Pengesahan penerimaan dan tandatangan perjanjian oleh Ibu Pejabat.</p>
         </div>
         <div class="px-4 py-3">
-            <p class="text-sm text-emerald-700">Perjanjian telah disahkan dan permohonan telah selesai.</p>
+            <p class="text-sm text-emerald-700">Perjanjian telah disahkan dan dihantar kepada Negeri untuk Mati Setem.</p>
+        </div>
+    </section>
+
+    <section class="glass-card overflow-hidden">
+        <div class="glass-divider-soft border-b px-4 py-3">
+            <h2 class="text-base font-semibold text-slate-900">Mati Setem</h2>
+            <p class="mt-0.5 text-xs text-slate-500">Pengesahan mati setem dan edaran dokumen oleh Negeri.</p>
+        </div>
+        <div class="px-4 py-3">
+            @include('status-permohonan.partials.negeri-mati-setem-readonly', [
+                'contract' => $contract,
+                'acknowledgementsCompleted' => true,
+            ])
         </div>
     </section>
 

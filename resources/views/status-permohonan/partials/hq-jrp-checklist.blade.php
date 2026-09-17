@@ -74,7 +74,6 @@
                             value="{{ $itemDate }}"
                             data-jrp-key="{{ $key }}"
                             class="jrp-checklist-date glass-input w-full rounded-lg px-2.5 py-1.5 text-sm sm:w-40"
-                            readonly
                             @disabled(! $isChecked)
                         >
                     </div>
@@ -130,7 +129,7 @@
         window.setTimeout(() => statusEl.classList.add('hidden'), 2000);
     }
 
-    function syncJrpDateVisibility(checkbox) {
+    function syncJrpDateVisibility(checkbox, autoSetToday = false) {
         if (!checkbox?.dataset.requiresDate) {
             return;
         }
@@ -150,7 +149,7 @@
             return;
         }
 
-        if (!dateInput.value) {
+        if (autoSetToday || !dateInput.value) {
             dateInput.value = todayDateValue();
         }
     }
@@ -233,9 +232,14 @@
     root.querySelectorAll('.jrp-checklist-item').forEach((checkbox) => {
         syncJrpDateVisibility(checkbox);
         checkbox.addEventListener('change', () => {
-            syncJrpDateVisibility(checkbox);
+            syncJrpDateVisibility(checkbox, checkbox.checked);
             scheduleAutosave();
         });
+    });
+
+    root.querySelectorAll('.jrp-checklist-date').forEach((dateInput) => {
+        dateInput.addEventListener('change', scheduleAutosave);
+        dateInput.addEventListener('input', scheduleAutosave);
     });
 })();
 </script>

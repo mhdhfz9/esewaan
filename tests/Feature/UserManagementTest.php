@@ -69,7 +69,7 @@ test('users index splits admin and negeri into separate containers', function ()
         ->assertSuccessful()
         ->getContent();
 
-    expect($html)->toContain('>Admin</h2>')
+    expect($html)->toContain('>Ibu Pejabat</h2>')
         ->and($html)->toContain('>Negeri</h2>')
         ->and($html)->toContain('Admin Utama')
         ->and($html)->toContain('negeri-split@example.test');
@@ -238,7 +238,7 @@ test('admin can view user edit page', function () {
         ->assertSee('Johor')
         ->assertDontSee('Pengguna PTJ')
         ->assertSee('Negeri')
-        ->assertSee('Admin')
+        ->assertSee('Ibu Pejabat')
         ->assertSee('id="negeri-field"', false)
         ->assertSee('data-password-toggle="admin-reset-password"', false)
         ->assertSee('data-password-toggle="admin-reset-password-confirm"', false);

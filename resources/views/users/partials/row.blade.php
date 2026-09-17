@@ -1,7 +1,7 @@
 @php
     $showNegeriColumn = $showNegeriColumn ?? true;
 @endphp
-<tr class="glass-row-hover transition-colors {{ ! $user->isActive() ? 'bg-slate-50/80' : '' }}">
+<tr class="glass-row-hover {{ ! $user->isActive() ? 'bg-slate-50/80' : '' }}">
     <td class="px-4 py-3 font-medium text-slate-800">{{ $user->name }}</td>
     <td class="px-4 py-3 text-slate-600">{{ $user->email }}</td>
     @if($showNegeriColumn)

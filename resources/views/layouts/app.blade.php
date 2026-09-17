@@ -4,6 +4,11 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
+    @auth
+        @if(auth()->user()->isAdmin())
+            <meta name="sidebar-notifications-url" content="{{ route('sidebar-notifications') }}">
+        @endif
+    @endauth
     <title>{{ config('app.name') }} - @yield('title', 'E-Sewaan AADK')</title>
     @if (file_exists(public_path('build/manifest.json')) || file_exists(public_path('hot')))
         @vite(['resources/css/app.css', 'resources/js/app.js'])
@@ -18,6 +23,7 @@
     @stack('styles')
 </head>
 <body class="liquid-bg min-h-screen font-sans antialiased">
+    @include('partials.global-loading-overlay')
     <div class="liquid-bg-mesh" aria-hidden="true">
         <div class="liquid-orb liquid-orb-1"></div>
         <div class="liquid-orb liquid-orb-2"></div>
@@ -69,7 +75,6 @@
                     @else
                     @include('partials.sidebar-kontrak-sewaan')
                     @endif
-                    @include('partials.sidebar-penampilan')
                 </nav>
                 @include('partials.sidebar-profile-footer')
             </div>
@@ -126,11 +131,12 @@
                     @else
                     @include('partials.sidebar-kontrak-sewaan')
                     @endif
-                    @include('partials.sidebar-penampilan')
                 </nav>
                 @include('partials.sidebar-profile-footer')
             </aside>
         </div>
+
+        @include('partials.sidebar-state')
 
         {{-- Main content --}}
         <div class="flex-1 flex flex-col min-w-0 overflow-hidden">
@@ -174,6 +180,8 @@
         document.getElementById('mobile-close-sidebar')?.addEventListener('click', closeMobileSidebar);
         document.getElementById('mobile-overlay-backdrop')?.addEventListener('click', closeMobileSidebar);
     </script>
+    @include('partials.sidebar-notifications-poll')
+    @include('partials.list-interaction')
     @else
     @if(request()->routeIs('login'))
     <main class="relative z-10 min-h-screen">
@@ -191,8 +199,8 @@
         @yield('content')
     </main>
     @else
-    {{-- Guest: simple top bar --}}
-    <header class="glass-header sticky top-0 z-20">
+    <div class="flex min-h-screen flex-col">
+    <header class="glass-header sticky top-0 z-20 flex-shrink-0">
         <div class="mx-auto flex h-14 max-w-7xl items-center justify-between px-4">
             <a href="{{ route('login') }}" class="flex items-center gap-3">
                 @php
@@ -219,12 +227,15 @@
             </div>
         </div>
     </header>
-    <main class="mx-auto max-w-7xl px-4 py-8">
-        @if(session('success'))<div class="mb-4 rounded-xl glass-alert-success p-4 text-green-800">{{ session('success') }}</div>@endif
-        @if(session('error'))<div class="mb-4 rounded-xl glass-alert-error p-4 text-red-800">{{ session('error') }}</div>@endif
-        @if(isset($errors) && $errors->any())<div class="mb-4 rounded-xl glass-alert-warning p-4 text-amber-800"><ul class="list-disc list-inside">@foreach($errors->all() as $e)<li>{{ $e }}</li>@endforeach</ul></div>@endif
-        @yield('content')
+    <main class="flex flex-1 items-center justify-center px-4 py-6 sm:px-8">
+        <div class="w-full max-w-md">
+            @if(session('success'))<div class="mb-4 rounded-xl glass-alert-success p-4 text-green-800 text-sm">{{ session('success') }}</div>@endif
+            @if(session('error'))<div class="mb-4 rounded-xl glass-alert-error p-4 text-red-800 text-sm">{{ session('error') }}</div>@endif
+            @if(isset($errors) && $errors->any())<div class="mb-4 rounded-xl glass-alert-warning p-4 text-amber-800 text-sm"><ul class="list-disc list-inside">@foreach($errors->all() as $e)<li>{{ $e }}</li>@endforeach</ul></div>@endif
+            @yield('content')
+        </div>
     </main>
+    </div>
     @endif
     @endauth
 

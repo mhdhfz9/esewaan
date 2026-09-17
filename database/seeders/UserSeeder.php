@@ -12,7 +12,7 @@ class UserSeeder extends Seeder
         User::query()->updateOrCreate(
             ['email' => 'admin@esewa.test'],
             [
-                'name' => 'Admin',
+                'name' => 'Ibu Pejabat',
                 'password' => 'password',
                 'role' => 'admin_hq',
                 'negeri' => null,

@@ -24,7 +24,7 @@
                 @php
                     $namaPtj = $c->displayNamaPtj();
                 @endphp
-                <tr class="glass-row-neutral transition-colors">
+                <tr class="glass-row-neutral">
                     <td class="min-w-[12rem] px-4 py-3.5 text-sm text-slate-800">
                         <p class="font-medium text-slate-800" title="{{ $namaPtj }}">{{ $namaPtj }}</p>
                     </td>

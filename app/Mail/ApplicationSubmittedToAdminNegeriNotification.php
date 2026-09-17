@@ -22,7 +22,7 @@ class ApplicationSubmittedToAdminNegeriNotification extends Mailable
     public function envelope(): Envelope
     {
         return new Envelope(
-            subject: 'E-Sewaan AADK: Permohonan Dihantar ke Admin',
+            subject: 'E-Sewaan AADK: Permohonan Dihantar ke Ibu Pejabat',
         );
     }
 

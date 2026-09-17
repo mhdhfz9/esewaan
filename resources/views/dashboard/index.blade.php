@@ -17,18 +17,18 @@
             </div>
             <p class="text-2xl font-bold leading-tight text-slate-900 lg:text-3xl">{{ number_format($permohonanBaharu) }}</p>
             <p class="mt-1 text-xs font-medium text-slate-500">Permohonan Baharu</p>
-            <p class="mt-1.5 text-xs text-sky-600">Menunggu semakan HQ</p>
+            <p class="mt-1.5 text-xs text-sky-600">Menunggu semakan Ibu Pejabat</p>
         </a>
 
-        {{-- 2. Progress permohonan --}}
-        <a href="{{ route('status-permohonan.index') }}" class="glass-card glass-kpi-card block p-4 lg:p-5">
+        {{-- 2. Dalam Tindakan --}}
+        <a href="#dalam-tindakan" class="glass-card glass-kpi-card block p-4 lg:p-5">
             <div class="mb-3 flex items-start justify-between">
                 <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-50/80 ring-1 ring-indigo-100/80">
                     <svg class="h-5 w-5 text-indigo-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
                 </div>
             </div>
             <p class="text-2xl font-bold leading-tight text-slate-900 lg:text-3xl">{{ number_format($progressPermohonan) }}</p>
-            <p class="mt-1 text-xs font-medium text-slate-500">Progress Permohonan</p>
+            <p class="mt-1 text-xs font-medium text-slate-500">Dalam Tindakan</p>
             <p class="mt-1.5 text-xs text-indigo-600">Dalam penyediaan draf perjanjian</p>
         </a>
 
@@ -57,6 +57,34 @@
         </a>
     </div>
 
+    {{-- Dalam Tindakan: pecahan mengikut status --}}
+    <div id="dalam-tindakan" class="glass-card overflow-hidden scroll-mt-24">
+        <div class="glass-divider-soft flex items-center justify-between border-b px-5 py-4">
+            <div class="flex items-center gap-2">
+                <svg class="h-4 w-4 text-indigo-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+                <h3 class="font-semibold text-gray-900">Status Tindakan</h3>
+                @if($progressPermohonan > 0)
+                <span class="rounded-md bg-indigo-100 px-1.5 py-0.5 text-xs font-bold text-indigo-700">{{ $progressPermohonan }}</span>
+                @endif
+            </div>
+            <p class="text-xs text-gray-400">Bilangan kontrak mengikut status permohonan</p>
+        </div>
+        <div class="divide-y divide-slate-200/50">
+            @foreach($dalamTindakanByStatus as $row)
+                <div class="flex items-center gap-3 px-5 py-3.5">
+                    <div class="h-2 w-2 flex-shrink-0 rounded-full {{ $row['count'] > 0 ? 'bg-indigo-500' : 'bg-slate-300' }}"></div>
+                    <div class="min-w-0 flex-1">
+                        <p class="truncate text-sm font-medium text-gray-900">{{ $row['status'] }}</p>
+                    </div>
+                    <div class="flex-shrink-0 text-right">
+                        <p class="text-sm font-semibold {{ $row['count'] > 0 ? 'text-indigo-700' : 'text-slate-400' }}">{{ number_format($row['count']) }}</p>
+                        <p class="text-xs text-gray-400">kontrak</p>
+                    </div>
+                </div>
+            @endforeach
+        </div>
+    </div>
+
     {{-- Alert list (8 bulan) --}}
     <div id="peringatan" class="glass-card overflow-hidden scroll-mt-24">
         <div class="glass-divider-soft flex items-center justify-between border-b px-5 py-4">
@@ -71,7 +99,7 @@
         </div>
         <div class="divide-y divide-slate-200/50">
             @forelse($alertList as $c)
-                <a href="{{ route('kontrak-sewaan.show', $c) }}" class="glass-row-hover flex items-center gap-3 px-5 py-3.5 transition-colors">
+                <a href="{{ route('kontrak-sewaan.show', $c) }}" class="glass-row-hover flex items-center gap-3 px-5 py-3.5">
                     <div class="h-2 w-2 flex-shrink-0 rounded-full bg-amber-500"></div>
                     <div class="min-w-0 flex-1">
                         <p class="truncate text-sm font-medium text-gray-900">{{ $c->premise?->nama_ptj ?? '–' }}</p>

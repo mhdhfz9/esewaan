@@ -12,8 +12,8 @@
     </style>
 </head>
 <body>
-    <h2>Permohonan Menunggu Semakan HQ</h2>
-    <p>Negeri <strong>{{ $submittedBy->name }}</strong> telah menghantar permohonan sewaan untuk semakan Admin.</p>
+    <h2>Permohonan Menunggu Semakan Ibu Pejabat</h2>
+    <p>Negeri <strong>{{ $submittedBy->name }}</strong> telah menghantar permohonan sewaan untuk semakan Ibu Pejabat.</p>
 
     <table>
         <tr>

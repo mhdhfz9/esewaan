@@ -14,7 +14,7 @@
             id="{{ $inputId }}"
             autocomplete="{{ $autocomplete }}"
             {{ $attributes->merge([
-                'class' => 'glass-input w-full rounded-xl py-2.5 pl-3 pr-11 text-sm',
+                'class' => 'auth-password-input glass-input w-full rounded-xl py-2.5 pl-3 pr-11 text-sm',
             ]) }}
         />
         <button

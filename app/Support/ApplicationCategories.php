@@ -40,15 +40,25 @@ class ApplicationCategories
     public static function stepSequence(?string $kategori): array
     {
         return match ($kategori) {
-            self::LANJUTAN => [1, 3, 4, 5],
-            self::BARU, self::PINDAH => [2, 3, 4, 5],
-            default => [2, 3, 4, 5],
+            self::LANJUTAN => [1, 3, 5],
+            self::BARU, self::PINDAH => [2, 3, 5],
+            default => [2, 3, 5],
         };
     }
 
     public static function label(?string $kategori): string
     {
         return self::labels()[$kategori] ?? '–';
+    }
+
+    public static function description(?string $kategori): string
+    {
+        return match ($kategori) {
+            self::BARU => 'Permohonan baharu.',
+            self::PINDAH => 'Permohonan pindah premis.',
+            self::LANJUTAN => 'Permohonan lanjutan kontrak.',
+            default => 'Sila pilih kategori permohonan.',
+        };
     }
 
     /**

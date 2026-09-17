@@ -37,6 +37,61 @@ function createKontrakSewaanContract(
     ]);
 }
 
+test('placeholder contract with future sah sehingga appears in active kontrak list', function () {
+    $admin = User::factory()->create(['role' => 'admin_negeri', 'negeri' => 'Johor']);
+    $contract = createKontrakSewaanContract('Johor', RentalContract::WORKFLOW_MENUNGGU_SEMAKAN_NEGERI, null, $admin);
+    $contract->premise->update(['nama_ptj' => 'Premis Placeholder Aktif']);
+
+    expect($contract->usesPlaceholderContractDates())->toBeTrue()
+        ->and($contract->isExpired())->toBeFalse()
+        ->and($contract->contractPeriodLabel())->toBe($contract->sah_sehingga->format('d/m/Y'))
+        ->and($contract->contractPeriodLabel())->not->toContain('Tawaran');
+
+    $count = RentalContract::query()
+        ->hqApproved()
+        ->notSuperseded()
+        ->kontrakNotExpired()
+        ->count();
+
+    expect($count)->toBe(1);
+
+    $this->actingAs($admin)
+        ->get(route('kontrak-sewaan.index'))
+        ->assertSuccessful()
+        ->assertSee('Premis Placeholder Aktif');
+});
+
+test('kontrak sewaan active list sorts by shortest remaining period and highlights urgency', function () {
+    $admin = User::factory()->create(['role' => 'admin_hq']);
+
+    $critical = createKontrakSewaanContract('Johor');
+    $critical->premise->update(['nama_ptj' => 'Premis Kritikal 2 Bulan']);
+    $critical->update(['sah_sehingga' => now()->addMonths(2)]);
+
+    $warning = createKontrakSewaanContract('Johor');
+    $warning->premise->update(['nama_ptj' => 'Premis Amaran 6 Bulan']);
+    $warning->update(['sah_sehingga' => now()->addMonths(6)]);
+
+    $normal = createKontrakSewaanContract('Johor');
+    $normal->premise->update(['nama_ptj' => 'Premis Normal 18 Bulan']);
+    $normal->update(['sah_sehingga' => now()->addMonths(18)]);
+
+    $html = $this->actingAs($admin)
+        ->get(route('kontrak-sewaan.index'))
+        ->assertSuccessful()
+        ->assertSee('Premis Kritikal 2 Bulan')
+        ->assertSee('Premis Amaran 6 Bulan')
+        ->assertSee('Premis Normal 18 Bulan')
+        ->assertSee('bg-red-100 text-red-700', false)
+        ->assertSee('bg-amber-100 text-amber-800', false)
+        ->getContent();
+
+    expect(strpos($html, 'Premis Kritikal 2 Bulan'))
+        ->toBeLessThan(strpos($html, 'Premis Amaran 6 Bulan'))
+        ->and(strpos($html, 'Premis Amaran 6 Bulan'))
+        ->toBeLessThan(strpos($html, 'Premis Normal 18 Bulan'));
+});
+
 test('hq approved contract appears in kontrak sewaan for admin hq', function () {
     $admin = User::factory()->create(['role' => 'admin_hq']);
     $negeriAdmin = User::factory()->create(['role' => 'admin_negeri', 'negeri' => 'Melaka', 'name' => 'Admin Melaka']);
@@ -178,6 +233,81 @@ test('kontrak sewaan search filters by nama premis and admin negeri name', funct
         ->assertDontSee('Premis Lain');
 });
 
+test('expired kontrak appears in sejarah tab and not in active tab', function () {
+    $admin = User::factory()->create(['role' => 'admin_hq']);
+    $negeriAdmin = User::factory()->create(['role' => 'admin_negeri', 'negeri' => 'Melaka', 'name' => 'Admin Melaka']);
+    $activeContract = createKontrakSewaanContract('Melaka', RentalContract::WORKFLOW_MENUNGGU_SEMAKAN_NEGERI, null, $negeriAdmin);
+    $activeContract->premise->update(['nama_ptj' => 'Premis Aktif Melaka']);
+    $activeContract->update([
+        'tarikh_mula' => now()->subMonths(2),
+        'tarikh_tamat' => now()->addMonths(10),
+    ]);
+
+    $expiredContract = createKontrakSewaanContract('Melaka', RentalContract::WORKFLOW_MENUNGGU_SEMAKAN_NEGERI, null, $negeriAdmin);
+    $expiredContract->premise->update(['nama_ptj' => 'Premis Tamat Melaka']);
+    $expiredContract->update([
+        'tarikh_mula' => now()->subYears(2),
+        'tarikh_tamat' => now()->subMonths(1),
+    ]);
+
+    $this->actingAs($admin)
+        ->get(route('kontrak-sewaan.index'))
+        ->assertSuccessful()
+        ->assertSee('Senarai Aktif')
+        ->assertSee('Sejarah')
+        ->assertSee('Premis Aktif Melaka')
+        ->assertDontSee('Premis Tamat Melaka');
+
+    $this->actingAs($admin)
+        ->get(route('kontrak-sewaan.index', ['tab' => 'history']))
+        ->assertSuccessful()
+        ->assertSee('Premis Tamat Melaka')
+        ->assertSee('Tamat tempoh', false)
+        ->assertDontSee('Premis Aktif Melaka');
+});
+
+test('placeholder kontrak moves to sejarah when offer end date has passed', function () {
+    $admin = User::factory()->create(['role' => 'admin_negeri', 'negeri' => 'Johor']);
+    $contract = createKontrakSewaanContract('Johor', RentalContract::WORKFLOW_MENUNGGU_SEMAKAN_NEGERI, null, $admin);
+    $contract->premise->update(['nama_ptj' => 'Premis Tawaran Luput']);
+    $contract->update([
+        'sah_sehingga' => now()->subMonth(),
+    ]);
+
+    expect($contract->fresh()->isExpired())->toBeTrue();
+
+    $this->actingAs($admin)
+        ->get(route('kontrak-sewaan.index'))
+        ->assertSuccessful()
+        ->assertDontSee('Premis Tawaran Luput');
+
+    $this->actingAs($admin)
+        ->get(route('kontrak-sewaan.index', ['tab' => 'history']))
+        ->assertSuccessful()
+        ->assertSee('Premis Tawaran Luput')
+        ->assertSee('Tamat tempoh', false);
+});
+
+test('expired kontrak with real end date appears in sejarah tab', function () {
+    $admin = User::factory()->create(['role' => 'admin_negeri', 'negeri' => 'Johor']);
+    $contract = createKontrakSewaanContract('Johor', RentalContract::WORKFLOW_MENUNGGU_SEMAKAN_NEGERI, null, $admin);
+    $contract->premise->update(['nama_ptj' => 'Premis Tarikh Tamat Luput']);
+    $contract->update([
+        'tarikh_mula' => now()->subYear(),
+        'tarikh_tamat' => now()->subMonth(),
+    ]);
+
+    $this->actingAs($admin)
+        ->get(route('kontrak-sewaan.index'))
+        ->assertSuccessful()
+        ->assertDontSee('Premis Tarikh Tamat Luput');
+
+    $this->actingAs($admin)
+        ->get(route('kontrak-sewaan.index', ['tab' => 'history']))
+        ->assertSuccessful()
+        ->assertSee('Premis Tarikh Tamat Luput');
+});
+
 test('kontrak sewaan show displays hq jrp checklist with dates for admin negeri', function () {
     $admin = User::factory()->create(['role' => 'admin_negeri', 'negeri' => 'Johor']);
     $contract = createKontrakSewaanContract('Johor', RentalContract::WORKFLOW_MENUNGGU_SEMAKAN_NEGERI, null, $admin);
@@ -214,14 +344,14 @@ test('kontrak sewaan show displays hq jrp checklist with dates for admin negeri'
         ->assertSee('Maklumat Kontrak')
         ->assertSee('Kemajuan Permohonan')
         ->assertSee('Permohonan Baru')
-        ->assertSee('Semakan HQ')
+        ->assertSee('Semakan Ibu Pejabat')
         ->assertSee('Selesai')
         ->assertSee('Pemilik Ujian')
         ->assertSee('Catatan ujian kontrak')
         ->assertSee('Langkah Tindakan Pegawai Negeri')
-        ->assertSee('Pengesahan HQ')
+        ->assertSee('Pengesahan Ibu Pejabat')
         ->assertSee('Kelulusan Pengurusan Tertinggi')
-        ->assertSee('Cawangan Pembangunan AADK menerima ulasan daripada EPU melalui KDN')
+        ->assertSee('Cawangan Pembangunan AADK menerima ulasan daripada Kementerian Ekonomi (KE)')
         ->assertSee('Cawangan Pembangunan AADK menerima ulasan daripada MOF melalui KDN')
         ->assertSee('16/07/2026')
         ->assertSee('Status Draf Perjanjian')

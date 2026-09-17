@@ -42,7 +42,8 @@ class UpdateRentalApplicationRequest extends FormRequest
             'jenis_bangunan' => ['required', Rule::in(BuildingTypes::values())],
             'kadar_sewa' => ['required', 'numeric', 'min:0', 'max:9999999.99'],
             'keluasan_mp' => ['required', 'numeric', 'min:0', 'max:9999999.99'],
-            'sah_sehingga' => ['required', 'date'],
+            'tarikh_mula_tawaran' => ['required', 'date'],
+            'sah_sehingga' => ['required', 'date', 'after_or_equal:tarikh_mula_tawaran'],
             'remark' => [
                 $contract->isFollowUpApplication() ? 'required' : 'nullable',
                 'string',
@@ -53,6 +54,8 @@ class UpdateRentalApplicationRequest extends FormRequest
             'proceed_steps.*.confirmed_accurate' => ['sometimes', 'boolean'],
             'proceed_steps.*.confirmed_promis' => ['sometimes', 'boolean'],
             'proceed_steps.*.notes' => ['nullable', 'string', 'max:2000'],
+            'proceed_steps.*.no_rujukan' => ['nullable', 'string', 'max:100'],
+            'proceed_steps.*.tarikh_surat' => ['nullable', 'date'],
         ];
     }
 
@@ -74,8 +77,11 @@ class UpdateRentalApplicationRequest extends FormRequest
             'keluasan_mp.required' => 'Keluasan (mps) diperlukan.',
             'keluasan_mp.numeric' => 'Keluasan (mps) mesti nombor yang sah.',
             'keluasan_mp.min' => 'Keluasan (mps) tidak boleh kurang daripada 0.',
-            'sah_sehingga.required' => 'Tarikh sah sehingga diperlukan.',
-            'sah_sehingga.date' => 'Tarikh sah sehingga mesti tarikh yang sah.',
+            'tarikh_mula_tawaran.required' => 'Tarikh mula diperlukan.',
+            'tarikh_mula_tawaran.date' => 'Tarikh mula mesti tarikh yang sah.',
+            'sah_sehingga.required' => 'Tarikh akhir tempoh tawaran penyewaan diperlukan.',
+            'sah_sehingga.date' => 'Tarikh akhir tempoh tawaran penyewaan mesti tarikh yang sah.',
+            'sah_sehingga.after_or_equal' => 'Tarikh akhir tempoh tawaran penyewaan mesti pada atau selepas tarikh mula.',
             'remark.required' => 'Remark diperlukan untuk permohonan pindah atau lanjutan.',
         ];
     }

@@ -29,7 +29,10 @@ class ReturnDraftToHqRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'draf_akhir_acknowledged' => ['accepted'],
+            'draf_akhir_diterima_acknowledged' => ['accepted'],
+            'dokumen_perjanjian_disediakan_acknowledged' => ['accepted'],
+            'dokumen_perjanjian_ditandatangani_acknowledged' => ['accepted'],
+            'dokumen_asal_dihantar_acknowledged' => ['accepted'],
         ];
     }
 
@@ -38,8 +41,13 @@ class ReturnDraftToHqRequest extends FormRequest
      */
     public function messages(): array
     {
+        $message = 'Sila tanda kesemua kotak pengesahan sebelum menghantar semula kepada Ibu Pejabat.';
+
         return [
-            'draf_akhir_acknowledged.accepted' => 'Sila tanda kotak pengesahan sebelum menghantar semula kepada Admin.',
+            'draf_akhir_diterima_acknowledged.accepted' => $message,
+            'dokumen_perjanjian_disediakan_acknowledged.accepted' => $message,
+            'dokumen_perjanjian_ditandatangani_acknowledged.accepted' => $message,
+            'dokumen_asal_dihantar_acknowledged.accepted' => $message,
         ];
     }
 }

@@ -14,7 +14,7 @@ class CompleteDraftAgreementRequest extends FormRequest
         $contract = $this->route('contract');
 
         return $user?->isAdminHq() === true
-            && $contract?->isAwaitingHqDraftAction() === true;
+            && $contract?->isAwaitingHqPindaanCompletion() === true;
     }
 
     /**

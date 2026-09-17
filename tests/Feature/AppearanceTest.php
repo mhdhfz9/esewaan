@@ -20,13 +20,15 @@ test('authenticated user can view penampilan page', function () {
         ->assertSee('Reset ke Default');
 });
 
-test('penampilan link is visible in sidebar for authenticated users', function () {
+test('penampilan gear link is visible beside profile in sidebar', function () {
     $user = User::factory()->create(['role' => 'admin_hq']);
 
     $this->actingAs($user)
         ->get(route('penampilan.show'))
         ->assertSuccessful()
-        ->assertSee(route('penampilan.show'), false);
+        ->assertSee(route('penampilan.show'), false)
+        ->assertSee('aria-label="Penampilan"', false)
+        ->assertDontSee('>Penampilan</span>', false);
 });
 
 test('guest cannot view penampilan page', function () {

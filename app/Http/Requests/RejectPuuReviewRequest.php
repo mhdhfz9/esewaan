@@ -5,7 +5,7 @@ namespace App\Http\Requests;
 use App\Models\RentalContract;
 use Illuminate\Foundation\Http\FormRequest;
 
-class SendToPuuRequest extends FormRequest
+class RejectPuuReviewRequest extends FormRequest
 {
     public function authorize(): bool
     {
@@ -14,7 +14,7 @@ class SendToPuuRequest extends FormRequest
         $contract = $this->route('contract');
 
         return $user?->isAdminHq() === true
-            && $contract?->isAwaitingHqDraftAction() === true;
+            && $contract?->isSemakanPuu() === true;
     }
 
     /**

@@ -72,7 +72,7 @@
                     <p class="mt-1.5 text-sm text-slate-500">Masukkan maklumat akaun anda untuk meneruskan.</p>
                 </div>
 
-                <form method="POST" action="{{ route('login.store') }}" class="space-y-5">
+                <form method="POST" action="{{ route('login.store') }}" class="space-y-5" data-no-global-loader>
                     @csrf
                     <div>
                         <label for="email" class="mb-1.5 block text-sm font-medium text-slate-700">Emel</label>
@@ -102,6 +102,9 @@
                             <input type="checkbox" name="remember" id="remember" class="h-4 w-4 rounded border-slate-300 text-slate-800 focus:ring-slate-500">
                             Ingat saya
                         </label>
+                        <a href="{{ route('password.request') }}" class="text-sm font-medium text-slate-700 hover:text-slate-900">
+                            Lupa Katalaluan?
+                        </a>
                     </div>
 
                     <button type="submit" class="glass-btn-primary w-full rounded-xl px-4 py-2.5 text-sm font-medium">

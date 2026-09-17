@@ -19,6 +19,8 @@ function completedLanjutanProceedProgress(): array
         'marked_complete' => true,
         'confirmed_accurate' => true,
         'confirmed_promis' => true,
+        'no_rujukan' => 'AADK/BKP/PB 200-3/02',
+        'tarikh_surat' => '2026-01-15',
     ];
 
     return [
@@ -154,10 +156,13 @@ test('kontrak sewaan list shows pending follow-up category in status badge', fun
         'kategori_permohonan' => ApplicationCategories::LANJUTAN,
     ]);
 
+    $followUp = RentalContract::query()->where('parent_contract_id', $parent->id)->first();
+
     $this->actingAs($admin)
         ->get(route('kontrak-sewaan.index'))
         ->assertSuccessful()
         ->assertSee('Dalam Tindakan Lanjutan')
+        ->assertSee(route('application.edit', $followUp), false)
         ->assertDontSee('Dalam Tindakan Lanjutan/Pindah')
         ->assertDontSee('Susulan lanjutan dalam proses')
         ->assertDontSee('>Susulan dalam proses<', false);
@@ -171,10 +176,13 @@ test('kontrak sewaan list shows pindah follow-up category in status badge', func
         'kategori_permohonan' => ApplicationCategories::PINDAH,
     ]);
 
+    $followUp = RentalContract::query()->where('parent_contract_id', $parent->id)->first();
+
     $this->actingAs($admin)
         ->get(route('kontrak-sewaan.index'))
         ->assertSuccessful()
         ->assertSee('Dalam Tindakan Pindah')
+        ->assertSee(route('application.edit', $followUp), false)
         ->assertDontSee('Dalam Tindakan Lanjutan/Pindah');
 });
 
@@ -414,6 +422,7 @@ test('remark is required when updating a follow-up application', function () {
             'jenis_bangunan' => \App\Support\BuildingTypes::values()[0],
             'kadar_sewa' => 1550,
             'keluasan_mp' => 200,
+            'tarikh_mula_tawaran' => now()->format('Y-m-d'),
             'sah_sehingga' => now()->addYear()->format('Y-m-d'),
             'remark' => '',
         ])
@@ -437,7 +446,7 @@ test('follow-up application shows hantar ke admin hq button in status list immed
     $this->actingAs($admin)
         ->get(route('status-permohonan.index'))
         ->assertSuccessful()
-        ->assertSee('Hantar ke Admin')
+        ->assertSee('Hantar ke Ibu Pejabat')
         ->assertSee('Dalam Tindakan Lanjutan');
 });
 
@@ -457,7 +466,7 @@ test('pindah follow-up shows pindah status in status permohonan list', function 
         ->get(route('status-permohonan.index'))
         ->assertSuccessful()
         ->assertSee('Dalam Tindakan Pindah')
-        ->assertSee('Hantar ke Admin');
+        ->assertSee('Hantar ke Ibu Pejabat');
 });
 
 test('follow-up cannot be sent to hq without remark even when proceed steps are complete', function () {
@@ -488,7 +497,7 @@ test('follow-up cannot be sent to hq without remark even when proceed steps are 
     $this->actingAs($admin)
         ->post(route('status-permohonan.submit-hq', $child))
         ->assertRedirect(route('application.edit', $child))
-        ->assertSessionHas('error', 'Sila isi Remark sebelum menghantar permohonan ke Admin.');
+        ->assertSessionHas('error', 'Sila isi Remark sebelum menghantar permohonan ke Ibu Pejabat.');
 });
 
 test('remark is saved when updating a follow-up application', function () {
@@ -509,6 +518,7 @@ test('remark is saved when updating a follow-up application', function () {
         'jenis_bangunan' => \App\Support\BuildingTypes::values()[0],
         'kadar_sewa' => 1550,
         'keluasan_mp' => 200,
+        'tarikh_mula_tawaran' => now()->format('Y-m-d'),
         'sah_sehingga' => now()->addYear()->format('Y-m-d'),
         'remark' => 'Pindah ke lokasi lebih strategik.',
     ])->assertRedirect(route('application.edit', $child));

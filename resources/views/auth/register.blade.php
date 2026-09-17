@@ -42,7 +42,7 @@
                 <label for="role" class="mb-1 block text-sm font-medium text-slate-700">Peranan</label>
                 <select name="role" id="role" required class="glass-input w-full rounded-xl px-3 py-2 text-sm">
                     @if(! auth()->user()->isAdminNegeri())
-                    <option value="admin_hq" @selected($defaultRole === 'admin_hq')>Admin</option>
+                    <option value="admin_hq" @selected($defaultRole === 'admin_hq')>Ibu Pejabat</option>
                     @endif
                     <option value="admin_negeri" @selected($defaultRole === 'admin_negeri')>Negeri</option>
                 </select>

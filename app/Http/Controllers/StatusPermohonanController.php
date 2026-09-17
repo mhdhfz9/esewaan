@@ -4,24 +4,34 @@ namespace App\Http\Controllers;
 
 use App\Http\Controllers\Concerns\RespondsWithTablePartial;
 use App\Http\Requests\ApproveHqApplicationRequest;
+use App\Http\Requests\ApprovePuuReviewRequest;
+use App\Http\Requests\AutosaveHqDraftAcknowledgementsRequest;
 use App\Http\Requests\AutosaveHqJrpChecklistRequest;
+use App\Http\Requests\AutosaveNegeriDraftAcknowledgementsRequest;
+use App\Http\Requests\AutosaveNegeriMatiSetemAcknowledgementsRequest;
 use App\Http\Requests\CompleteDraftAgreementRequest;
+use App\Http\Requests\CompleteMatiSetemRequest;
 use App\Http\Requests\DeleteRentalApplicationRequest;
+use App\Http\Requests\RejectPuuReviewRequest;
 use App\Http\Requests\RequestWithdrawalApplicationRequest;
 use App\Http\Requests\ResolveWithdrawalApplicationRequest;
 use App\Http\Requests\ReturnDraftToHqRequest;
-use App\Http\Requests\SendToPuuRequest;
 use App\Http\Requests\SignAgreementRequest;
+use App\Http\Requests\StoreDraftAgreementRequest;
 use App\Mail\ApplicationApprovedByHqNotification;
 use App\Mail\ApplicationSubmittedToAdminNegeriNotification;
 use App\Mail\ApplicationSubmittedToHqNotification;
+use App\Models\ContractDocument;
 use App\Models\RentalContract;
 use App\Models\User;
 use App\Services\ActivityLogger;
 use App\Services\SidebarNotificationService;
 use App\Support\AdminProceedSteps;
 use App\Support\ApplicationCategories;
+use App\Support\HqDraftAcknowledgements;
 use App\Support\HqJrpChecklist;
+use App\Support\NegeriDraftAcknowledgements;
+use App\Support\NegeriMatiSetemAcknowledgements;
 use App\Support\RentalContractListSearch;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
@@ -69,11 +79,28 @@ class StatusPermohonanController extends Controller
         return view('status-permohonan.index', $payload);
     }
 
+    public function sync(Request $request): JsonResponse
+    {
+        $user = $request->user();
+        $search = trim((string) $request->input('search', ''));
+        $tab = $request->input('tab', 'active');
+
+        if ($user->isAdminHq()) {
+            $tab = in_array($tab, ['active', 'history'], true) ? $tab : 'active';
+        } else {
+            $tab = 'active';
+        }
+
+        return response()->json([
+            'fingerprint' => $this->listFingerprint($user, $search, $tab),
+        ]);
+    }
+
     public function review(Request $request, RentalContract $contract): View
     {
         $this->ensureCanReview($request, $contract);
 
-        $contract->loadMissing(['premise', 'submittedBy', 'adminNegeriUser', 'parentContract.premise', 'withdrawalRequestedBy']);
+        $contract->loadMissing(['premise', 'submittedBy', 'adminNegeriUser', 'parentContract.premise', 'withdrawalRequestedBy', 'documents.user']);
         app(SidebarNotificationService::class)->markContractAsViewed($request->user(), $contract);
         $proceedData = AdminProceedSteps::viewData($contract, 1);
 
@@ -105,7 +132,7 @@ class StatusPermohonanController extends Controller
         ActivityLogger::log(
             $hqUser,
             'application_approved_by_hq',
-            'Permohonan premis '.($contract->premise?->nama_ptj ?? '–').' diteruskan ke penyediaan draf perjanjian oleh HQ.',
+            'Permohonan premis '.($contract->premise?->nama_ptj ?? '–').' diteruskan ke penyediaan draf perjanjian oleh Ibu Pejabat.',
             ['contract_id' => $contract->id, 'next_workflow' => $nextWorkflow],
         );
 
@@ -118,17 +145,28 @@ class StatusPermohonanController extends Controller
     }
 
     /**
-     * Advance a draft-agreement application to the PUU review stage. Repeated
-     * submissions increment the review round (Semakan 1, Semakan 2, ...).
+     * Negeri uploads a draft agreement PDF. Each upload advances the application
+     * to PUU review and increments the semakan round (Semakan 1, 2, ...).
      */
-    public function sendToPuu(SendToPuuRequest $request, RentalContract $contract): RedirectResponse
+    public function uploadDraftAgreement(StoreDraftAgreementRequest $request, RentalContract $contract): RedirectResponse
     {
         $contract->loadMissing(['premise', 'submittedBy', 'adminNegeriUser']);
-        $hqUser = $request->user();
+        $user = $request->user();
 
-        $nextCount = $contract->isSemakanPuu()
-            ? ((int) $contract->semakan_count + 1)
-            : 1;
+        $file = $request->file('document');
+        $path = $file->store('contract-documents/'.$contract->id, 'public');
+        $safeName = $this->sanitizeFilename($file->getClientOriginalName());
+        $nextCount = (int) $contract->semakan_count + 1;
+
+        ContractDocument::query()->create([
+            'contract_id' => $contract->id,
+            'nama_fail' => $safeName,
+            'path' => $path,
+            'jenis' => ContractDocument::JENIS_DRAF_PERJANJIAN,
+            'semakan_round' => $nextCount,
+            'semakan_status' => ContractDocument::SEMAKAN_MENUNGGU,
+            'user_id' => $user->id,
+        ]);
 
         $contract->update([
             'workflow_tahap' => RentalContract::WORKFLOW_SEMAKAN_PUU,
@@ -136,20 +174,72 @@ class StatusPermohonanController extends Controller
         ]);
 
         ActivityLogger::log(
-            $hqUser,
-            'application_sent_to_puu',
-            'Permohonan premis '.($contract->premise?->nama_ptj ?? '–').' dihantar ke PUU (Semakan '.$nextCount.').',
+            $user,
+            'draft_agreement_uploaded',
+            'Draf perjanjian premis '.($contract->premise?->nama_ptj ?? '–').' dimuat naik (Semakan '.$nextCount.').',
             ['contract_id' => $contract->id, 'semakan_count' => $nextCount],
         );
 
         return redirect()
-            ->route('status-permohonan.index')
-            ->with('success', 'Permohonan dihantar ke PUU (Semakan '.$nextCount.').');
+            ->route('status-permohonan.review', $contract)
+            ->with('success', 'Draf perjanjian berjaya dimuat naik dan dihantar untuk Semakan '.$nextCount.'.');
     }
 
     /**
-     * HQ marks the draft agreement as approved without amendment and hands the
-     * application over to the state (Negeri) for final document preparation.
+     * HQ approves the current PUU review round and advances to Draf Lulus (Selesai).
+     */
+    public function approvePuuReview(ApprovePuuReviewRequest $request, RentalContract $contract): RedirectResponse
+    {
+        $contract->loadMissing(['premise', 'submittedBy', 'adminNegeriUser']);
+        $hqUser = $request->user();
+
+        ContractDocument::markSemakanOutcome($contract, ContractDocument::SEMAKAN_DILULUSKAN);
+
+        $contract->update([
+            'workflow_tahap' => RentalContract::WORKFLOW_DRAF_PERJANJIAN_LULUS,
+        ]);
+
+        ActivityLogger::log(
+            $hqUser,
+            'puu_review_approved',
+            'Semakan PUU premis '.($contract->premise?->nama_ptj ?? '–').' diluluskan ('.$contract->semakanLabel().').',
+            ['contract_id' => $contract->id, 'semakan_count' => $contract->semakan_count],
+        );
+
+        return redirect()
+            ->route('status-permohonan.index')
+            ->with('success', 'Semakan PUU diluluskan. Status permohonan dikemaskini kepada Dokumen Perjanjian dikembalikan ke Cawangan Pembangunan AADK.');
+    }
+
+    /**
+     * HQ rejects the current PUU review round and returns the application to
+     * Negeri for a revised draft upload.
+     */
+    public function rejectPuuReview(RejectPuuReviewRequest $request, RentalContract $contract): RedirectResponse
+    {
+        $contract->loadMissing(['premise', 'submittedBy', 'adminNegeriUser']);
+        $hqUser = $request->user();
+
+        ContractDocument::markSemakanOutcome($contract, ContractDocument::SEMAKAN_DIBATALKAN);
+
+        $contract->update([
+            'workflow_tahap' => RentalContract::WORKFLOW_PENYEDIAAN_DRAF_PERJANJIAN,
+        ]);
+
+        ActivityLogger::log(
+            $hqUser,
+            'puu_review_rejected',
+            'Semakan PUU premis '.($contract->premise?->nama_ptj ?? '–').' dibatalkan ('.$contract->semakanLabel().'). Draf dikembalikan kepada Negeri.',
+            ['contract_id' => $contract->id, 'semakan_count' => $contract->semakan_count],
+        );
+
+        return redirect()
+            ->route('status-permohonan.index')
+            ->with('success', 'Semakan PUU dibatalkan. Negeri perlu muat naik draf semula.');
+    }
+
+    /**
+     * HQ marks pindaan as complete and advances to Draf Lulus for Negeri.
      */
     public function complete(CompleteDraftAgreementRequest $request, RentalContract $contract): RedirectResponse
     {
@@ -183,6 +273,7 @@ class StatusPermohonanController extends Controller
 
         $contract->update([
             'workflow_tahap' => RentalContract::WORKFLOW_DRAF_DIKEMBALIKAN_HQ,
+            'negeri_draft_acknowledgements' => NegeriDraftAcknowledgements::normalizeInput($request->validated()),
         ]);
 
         ActivityLogger::log(
@@ -194,12 +285,12 @@ class StatusPermohonanController extends Controller
 
         return redirect()
             ->route('status-permohonan.index')
-            ->with('success', 'Draf akhir telah dikembalikan kepada Admin (Cawangan Pembangunan AADK).');
+            ->with('success', 'Draf akhir telah dikembalikan kepada Ibu Pejabat (Cawangan Pembangunan AADK).');
     }
 
     /**
-     * HQ (Cawangan Pembangunan AADK) confirms receipt, TKPP AADK signing, and
-     * ProMIS record before finalising the application into the rental contract list.
+     * HQ confirms receipt, TKPP signing, and the ProMIS record, then returns
+     * the application to Negeri for stamp duty.
      */
     public function finalize(SignAgreementRequest $request, RentalContract $contract): RedirectResponse
     {
@@ -207,18 +298,47 @@ class StatusPermohonanController extends Controller
         $hqUser = $request->user();
 
         $contract->update([
-            'workflow_tahap' => RentalContract::WORKFLOW_MENUNGGU_SEMAKAN_NEGERI,
+            'workflow_tahap' => RentalContract::WORKFLOW_MATI_SETEM,
+            'hq_draft_acknowledgements' => HqDraftAcknowledgements::normalizeInput($request->validated()),
         ]);
 
         ActivityLogger::log(
             $hqUser,
-            'agreement_finalized',
-            'Perjanjian premis '.($contract->premise?->nama_ptj ?? '–').' selesai dan dimasukkan ke dalam Senarai Kontrak Sewaan.',
+            'agreement_sent_for_stamp_duty',
+            'Perjanjian premis '.($contract->premise?->nama_ptj ?? '–').' dihantar kepada Negeri untuk mati setem.',
             ['contract_id' => $contract->id],
         );
 
         return redirect()
             ->route('status-permohonan.index')
+            ->with('success', 'Dokumen telah dihantar kepada Negeri untuk Mati Setem.');
+    }
+
+    /**
+     * Negeri confirms stamp duty is complete and the application enters the
+     * rental contract list.
+     */
+    public function completeMatiSetem(CompleteMatiSetemRequest $request, RentalContract $contract): RedirectResponse
+    {
+        $contract->loadMissing(['premise', 'submittedBy', 'adminNegeriUser']);
+        $user = $request->user();
+
+        $contract->update([
+            'workflow_tahap' => RentalContract::WORKFLOW_MENUNGGU_SEMAKAN_NEGERI,
+            'status_aktif' => 'aktif',
+            'hq_approved_at' => $contract->hq_approved_at ?? now(),
+            'negeri_mati_setem_acknowledgements' => NegeriMatiSetemAcknowledgements::normalizeInput($request->validated()),
+        ]);
+
+        ActivityLogger::log(
+            $user,
+            'agreement_finalized',
+            'Perjanjian premis '.($contract->premise?->nama_ptj ?? '–').' selesai selepas mati setem dan dimasukkan ke dalam Senarai Kontrak Sewaan.',
+            ['contract_id' => $contract->id],
+        );
+
+        return redirect()
+            ->route('kontrak-sewaan.index')
             ->with('success', 'Permohonan telah selesai dan dimasukkan ke dalam Senarai Kontrak Sewaan.');
     }
 
@@ -235,6 +355,51 @@ class StatusPermohonanController extends Controller
             'success' => true,
             'message' => 'Checklist disimpan.',
             'checklist' => $contract->fresh()->hq_jrp_checklist,
+        ]);
+    }
+
+    public function autosaveNegeriDraftAcknowledgements(AutosaveNegeriDraftAcknowledgementsRequest $request, RentalContract $contract): JsonResponse
+    {
+        $contract->update([
+            'negeri_draft_acknowledgements' => NegeriDraftAcknowledgements::normalizeInput(
+                $request->validated('acknowledgements') ?? [],
+            ),
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Data disimpan',
+            'acknowledgements' => $contract->fresh()->negeri_draft_acknowledgements,
+        ]);
+    }
+
+    public function autosaveHqDraftAcknowledgements(AutosaveHqDraftAcknowledgementsRequest $request, RentalContract $contract): JsonResponse
+    {
+        $contract->update([
+            'hq_draft_acknowledgements' => HqDraftAcknowledgements::normalizeInput(
+                $request->validated('acknowledgements') ?? [],
+            ),
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Data disimpan',
+            'acknowledgements' => $contract->fresh()->hq_draft_acknowledgements,
+        ]);
+    }
+
+    public function autosaveNegeriMatiSetemAcknowledgements(AutosaveNegeriMatiSetemAcknowledgementsRequest $request, RentalContract $contract): JsonResponse
+    {
+        $contract->update([
+            'negeri_mati_setem_acknowledgements' => NegeriMatiSetemAcknowledgements::normalizeInput(
+                $request->validated('acknowledgements') ?? [],
+            ),
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Data disimpan',
+            'acknowledgements' => $contract->fresh()->negeri_mati_setem_acknowledgements,
         ]);
     }
 
@@ -290,7 +455,7 @@ class StatusPermohonanController extends Controller
 
         return redirect()
             ->route('status-permohonan.index')
-            ->with('success', 'Permohonan telah dipadam dan direkodkan dalam sejarah HQ.');
+            ->with('success', 'Permohonan telah dipadam dan direkodkan dalam sejarah Ibu Pejabat.');
     }
 
     public function requestWithdrawal(RequestWithdrawalApplicationRequest $request, RentalContract $contract): RedirectResponse
@@ -310,7 +475,7 @@ class StatusPermohonanController extends Controller
         ActivityLogger::log(
             $request->user(),
             'application_withdrawal_requested',
-            'Permohonan premis '.($contract->premise?->nama_ptj ?? '–').' dimohon untuk ditarik semula daripada HQ.',
+            'Permohonan premis '.($contract->premise?->nama_ptj ?? '–').' dimohon untuk ditarik semula daripada Ibu Pejabat.',
             [
                 'contract_id' => $contract->id,
                 'withdrawal_reason' => $contract->withdrawal_reason,
@@ -319,7 +484,7 @@ class StatusPermohonanController extends Controller
 
         return redirect()
             ->route('status-permohonan.index')
-            ->with('success', 'Permohonan tarik semula telah dihantar kepada HQ untuk kelulusan.');
+            ->with('success', 'Permohonan tarik semula telah dihantar kepada Ibu Pejabat untuk kelulusan.');
     }
 
     public function resolveWithdrawal(ResolveWithdrawalApplicationRequest $request, RentalContract $contract): RedirectResponse
@@ -340,7 +505,7 @@ class StatusPermohonanController extends Controller
             ActivityLogger::log(
                 $hqUser,
                 'application_withdrawal_approved',
-                'Permohonan tarik semula premis '.($contract->premise?->nama_ptj ?? '–').' diluluskan oleh HQ.',
+                'Permohonan tarik semula premis '.($contract->premise?->nama_ptj ?? '–').' diluluskan oleh Ibu Pejabat.',
                 ['contract_id' => $contract->id],
             );
 
@@ -359,7 +524,7 @@ class StatusPermohonanController extends Controller
         ActivityLogger::log(
             $hqUser,
             'application_withdrawal_rejected',
-            'Permohonan tarik semula premis '.($contract->premise?->nama_ptj ?? '–').' ditolak oleh HQ.',
+            'Permohonan tarik semula premis '.($contract->premise?->nama_ptj ?? '–').' ditolak oleh Ibu Pejabat.',
             ['contract_id' => $contract->id],
         );
 
@@ -385,13 +550,13 @@ class StatusPermohonanController extends Controller
         if (! $contract->isPendingProceed() || ! $contract->isProceedComplete()) {
             return redirect()
                 ->route('status-permohonan.index')
-                ->with('error', 'Permohonan ini belum lengkap untuk dihantar kepada Admin.');
+                ->with('error', 'Permohonan ini belum lengkap untuk dihantar kepada Ibu Pejabat.');
         }
 
         if (! $contract->hasRequiredFollowUpRemark()) {
             return redirect()
                 ->route('application.edit', $contract)
-                ->with('error', 'Sila isi Remark sebelum menghantar permohonan ke Admin.');
+                ->with('error', 'Sila isi Remark sebelum menghantar permohonan ke Ibu Pejabat.');
         }
 
         $contract->update([
@@ -402,7 +567,7 @@ class StatusPermohonanController extends Controller
         ActivityLogger::log(
             $user,
             'application_sent_to_hq',
-            'Permohonan premis '.$contract->premise?->nama_ptj.' dihantar kepada Admin untuk semakan.',
+            'Permohonan premis '.$contract->premise?->nama_ptj.' dihantar kepada Ibu Pejabat untuk semakan.',
             ['contract_id' => $contract->id],
         );
 
@@ -411,7 +576,7 @@ class StatusPermohonanController extends Controller
 
         return redirect()
             ->route('status-permohonan.index')
-            ->with('success', 'Permohonan telah dihantar kepada Admin untuk semakan.');
+            ->with('success', 'Permohonan telah dihantar kepada Ibu Pejabat untuk semakan.');
     }
 
     private function notifyAdminHqOfSubmittedApplication(RentalContract $contract, User $submittedBy): void
@@ -505,6 +670,40 @@ class StatusPermohonanController extends Controller
             ->all();
     }
 
+    private function listFingerprint(User $user, string $search, string $tab): string
+    {
+        $query = $tab === 'history'
+            ? $this->historyQuery($user, $search)
+            : $this->contractsQuery($user, $search);
+
+        $contracts = (clone $query)
+            ->select([
+                'rental_contracts.id',
+                'rental_contracts.updated_at',
+                'rental_contracts.withdrawal_status',
+                'rental_contracts.workflow_tahap',
+                'rental_contracts.deleted_at',
+            ])
+            ->orderBy('rental_contracts.id')
+            ->get();
+
+        if ($contracts->isEmpty()) {
+            return hash('xxh128', 'empty');
+        }
+
+        $signature = $contracts
+            ->map(fn (RentalContract $contract) => implode(':', [
+                $contract->id,
+                $contract->updated_at?->getTimestamp() ?? 0,
+                $contract->withdrawal_status ?? '',
+                $contract->workflow_tahap ?? '',
+                $contract->deleted_at?->getTimestamp() ?? 0,
+            ]))
+            ->implode('|');
+
+        return hash('xxh128', $signature);
+    }
+
     /**
      * @return Builder<RentalContract>
      */
@@ -527,7 +726,8 @@ class StatusPermohonanController extends Controller
             ->tap(fn (Builder $query) => RentalContractListSearch::apply($query, $search, [
                 'include_peringkat_proses' => true,
             ]))
-            ->orderForUserList($user, 'updated_at');
+            ->orderByDesc('rental_contracts.created_at')
+            ->orderByDesc('rental_contracts.id');
     }
 
     /**
@@ -574,7 +774,7 @@ class StatusPermohonanController extends Controller
 
         if ($user?->isAdminHq()) {
             if (! $contract->isPendingHqReview() && ! $contract->isInDraftAgreementStage()) {
-                abort(403, 'Permohonan ini tidak tersedia untuk semakan HQ.');
+                abort(403, 'Permohonan ini tidak tersedia untuk semakan Ibu Pejabat.');
             }
 
             return;
@@ -591,5 +791,13 @@ class StatusPermohonanController extends Controller
         }
 
         abort(403, 'Akses ditolak.');
+    }
+
+    private function sanitizeFilename(string $name): string
+    {
+        $name = basename(str_replace(["\0", '..'], '', $name));
+        $name = preg_replace('/[^\pL\pN._-]/u', '_', $name) ?? $name;
+
+        return mb_substr($name, 0, 255);
     }
 }

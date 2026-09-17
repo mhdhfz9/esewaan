@@ -16,7 +16,7 @@ class EnsureUserIsAdminHq
     public function handle(Request $request, Closure $next): Response
     {
         if (! $request->user()?->isAdminHq()) {
-            abort(403, 'Akses ditolak. Fungsi ini hanya untuk Admin.');
+            abort(403, 'Akses ditolak. Fungsi ini hanya untuk Ibu Pejabat.');
         }
 
         return $next($request);

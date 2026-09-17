@@ -110,6 +110,19 @@
         border-color: rgba(71, 85, 105, 0.45);
     }
 
+    html[data-theme="dark"] .glass-card.glass-table thead {
+        background: #0f172a;
+    }
+
+    html[data-theme="dark"] .glass-card.glass-table tbody {
+        background: rgba(15, 23, 42, 0.96);
+    }
+
+    html[data-theme="dark"] .glass-card.glass-table > .glass-row-hover,
+    html[data-theme="dark"] .glass-card > .divide-y {
+        background: rgba(15, 23, 42, 0.96);
+    }
+
     html[data-theme="dark"] .glass-divider,
     html[data-theme="dark"] .glass-divider-soft,
     html[data-theme="dark"] .border-b,

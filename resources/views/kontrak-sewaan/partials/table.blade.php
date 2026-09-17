@@ -1,13 +1,13 @@
 <p id="kontrak-sewaan-count" class="text-sm text-slate-600">
-    Menunjukkan <strong class="text-slate-800">{{ $contracts->count() }}</strong> daripada <strong class="text-slate-800">{{ $contracts->total() }}</strong> kontrak
+    Menunjukkan <strong class="text-slate-800">{{ $contracts->count() }}</strong> daripada <strong class="text-slate-800">{{ $contracts->total() }}</strong> kontrak aktif
 </p>
 
 <div class="glass-card glass-table overflow-hidden">
     <div class="overflow-x-auto">
-        <table class="w-full min-w-[56rem] text-sm">
+        <table class="w-full min-w-[56rem] text-center text-sm">
             <thead>
                 <tr class="glass-divider border-b">
-                    <th class="min-w-[9rem] px-4 py-3 text-center text-xs font-semibold uppercase tracking-wide text-gray-500">Negeri</th>
+                    <th class="min-w-[9rem] px-4 py-3 text-center text-xs font-semibold uppercase tracking-wide text-gray-500">Nama Pemohon</th>
                     <th class="min-w-[12rem] px-4 py-3 text-center text-xs font-semibold uppercase tracking-wide text-gray-500">Nama Premis</th>
                     <th class="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wide text-gray-500">Kategori</th>
                     <th class="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wide text-gray-500">Negeri</th>
@@ -21,12 +21,15 @@
                 @forelse($contracts as $c)
                     @php
                         $bakiLabel = $c->daysUntilContractEndLabel();
-                        $isExpiringSoon = $c->isContractEndWithinEightMonths();
+                        $isCritical = $c->isContractEndWithinThreeMonths();
+                        $isWarning = ! $isCritical && $c->isContractEndWithinEightMonths();
                         $isUnseen = $c->isUnseenBy(auth()->user());
                     @endphp
                     <tr @class([
-                        'glass-row-hover transition-colors',
+                        'glass-row-hover',
                         'glass-row-unseen' => $isUnseen,
+                        'bg-red-50/80' => $isCritical,
+                        'bg-amber-50/80' => $isWarning,
                     ])>
                         <td class="px-4 py-3 text-sm font-semibold text-slate-800">{{ $c->displayAdminNegeriName() }}</td>
                         <td class="px-4 py-3 text-sm font-semibold text-slate-800">{{ $c->displayPremisePtjName() }}</td>
@@ -40,9 +43,10 @@
                         <td class="px-4 py-3 text-sm text-slate-600">{{ $c->contractPeriodLabel() }}</td>
                         <td class="px-4 py-3 text-sm">
                             <span @class([
-                                'font-medium text-amber-700' => $isExpiringSoon,
-                                'text-red-600' => str_starts_with($bakiLabel, 'Tamat tempoh'),
-                                'text-slate-600' => ! $isExpiringSoon && ! str_starts_with($bakiLabel, 'Tamat tempoh'),
+                                'inline-flex rounded-md px-2 py-1 text-xs font-semibold',
+                                'bg-red-100 text-red-700' => $isCritical,
+                                'bg-amber-100 text-amber-800' => $isWarning,
+                                'text-slate-600' => ! $isCritical && ! $isWarning,
                             ])>
                                 {{ $bakiLabel }}
                             </span>
@@ -52,9 +56,14 @@
                                 @if(auth()->user()->isAdminNegeri())
                                     @if($c->hasPendingFollowUp())
                                         @php
-                                            $susulanLabel = $c->pendingFollowUpInProgressLabel();
+                                            $followUp = $c->pendingFollowUp();
+                                            $susulanLabel = $followUp?->followUpInProgressStatusLabel() ?? 'Dalam Tindakan Lanjutan/Pindah';
                                         @endphp
-                                        <span class="rounded-lg px-2.5 py-1 text-xs font-medium text-amber-700" title="{{ $susulanLabel }}">{{ $susulanLabel }}</span>
+                                        <a
+                                            href="{{ $followUp?->followUpWorkspaceUrl() }}"
+                                            class="rounded-lg px-2.5 py-1 text-xs font-medium text-amber-700 underline decoration-amber-400/80 underline-offset-2 transition-colors hover:bg-amber-50 hover:text-amber-800"
+                                            title="Buka borang {{ $susulanLabel }}"
+                                        >{{ $susulanLabel }}</a>
                                     @else
                                         <form method="POST" action="{{ route('kontrak-sewaan.follow-up', $c) }}">
                                             @csrf
@@ -85,7 +94,7 @@
                 @empty
                     <tr>
                         <td colspan="8" class="px-4 py-12 text-center text-slate-500">
-                            Tiada kontrak sewaan dijumpai.
+                            Tiada kontrak aktif dijumpai.
                         </td>
                     </tr>
                 @endforelse

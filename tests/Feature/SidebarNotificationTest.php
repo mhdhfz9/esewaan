@@ -38,8 +38,8 @@ test('admin negeri sidebar shows status permohonan and kontrak sewaan counts sep
     RentalContract::query()->create([
         'premise_id' => $kontrakPremise->id,
         'submitted_by_user_id' => null,
-        'tarikh_mula' => '2025-01-01',
-        'tarikh_tamat' => '2026-01-01',
+        'tarikh_mula' => now()->subMonths(2)->toDateString(),
+        'tarikh_tamat' => now()->addYear()->toDateString(),
         'kadar_sewa_bulanan' => 500,
         'status_aktif' => 'dalam_proses',
         'workflow_tahap' => RentalContract::WORKFLOW_MENUNGGU_SEMAKAN_NEGERI,
@@ -115,7 +115,7 @@ test('admin hq sidebar shows pending withdrawal count', function () {
 
     $this->actingAs($negeriAdmin)
         ->post(route('status-permohonan.request-withdrawal', $contract), [
-            'withdrawal_reason' => 'Maklumat premis perlu dikemaskini sebelum semakan HQ.',
+            'withdrawal_reason' => 'Maklumat premis perlu dikemaskini sebelum semakan Ibu Pejabat.',
         ]);
 
     $counts = app(SidebarNotificationService::class)->forUser($hqAdmin);
@@ -136,8 +136,8 @@ test('admin negeri does not count pending items from other negeri', function () 
     RentalContract::query()->create([
         'premise_id' => $premise->id,
         'submitted_by_user_id' => null,
-        'tarikh_mula' => '2025-01-01',
-        'tarikh_tamat' => '2026-01-01',
+        'tarikh_mula' => now()->subMonths(2)->toDateString(),
+        'tarikh_tamat' => now()->addYear()->toDateString(),
         'kadar_sewa_bulanan' => 500,
         'status_aktif' => 'dalam_proses',
         'workflow_tahap' => RentalContract::WORKFLOW_MENUNGGU_SEMAKAN_NEGERI,

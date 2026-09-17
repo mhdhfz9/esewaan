@@ -72,14 +72,15 @@ class RentalApplicationController extends Controller
             'status_aktif' => 'dalam_proses',
             'peringkat_proses' => null,
             'workflow_tahap' => RentalContract::WORKFLOW_MENUNGGU_PROCEED_NEGERI,
-            'kategori_permohonan' => ApplicationCategories::BARU,
+            'kategori_permohonan' => $validated['kategori_permohonan'],
+            'tarikh_mula_tawaran' => $validated['tarikh_mula_tawaran'],
             'sah_sehingga' => $validated['sah_sehingga'],
         ]);
 
         ActivityLogger::log(
             $admin,
             'application_drafted',
-            'Permohonan baharu untuk premis '.$premise->nama_ptj.' dicipta. Sila lengkapkan langkah tindakan sebelum dihantar kepada HQ.',
+            'Permohonan '.ApplicationCategories::label($validated['kategori_permohonan']).' untuk premis '.$premise->nama_ptj.' dicipta. Sila lengkapkan langkah tindakan sebelum dihantar kepada Ibu Pejabat.',
             ['contract_id' => $contract->id, 'premise_id' => $premise->id],
         );
 
@@ -87,11 +88,12 @@ class RentalApplicationController extends Controller
             'admin_id' => $admin->id,
             'premise_id' => $premise->id,
             'contract_id' => $contract->id,
+            'kategori_permohonan' => $validated['kategori_permohonan'],
         ]);
 
         return redirect()
             ->route('admin-proceed.show', $contract)
-            ->with('success', 'Permohonan baharu disimpan. Sila lengkapkan langkah tindakan.');
+            ->with('success', 'Permohonan '.ApplicationCategories::label($validated['kategori_permohonan']).' disimpan. Sila lengkapkan langkah tindakan.');
     }
 
     public function update(UpdateRentalApplicationRequest $request, RentalContract $contract): RedirectResponse|JsonResponse
@@ -163,6 +165,12 @@ class RentalApplicationController extends Controller
             ]);
         }
 
+        if (! $partial || array_key_exists('tarikh_mula_tawaran', $validated)) {
+            $contract->update([
+                'tarikh_mula_tawaran' => $validated['tarikh_mula_tawaran'] ?? $contract->tarikh_mula_tawaran,
+            ]);
+        }
+
         if (! $partial || array_key_exists('sah_sehingga', $validated)) {
             $contract->update([
                 'sah_sehingga' => $validated['sah_sehingga'] ?? $contract->sah_sehingga,
@@ -206,6 +214,8 @@ class RentalApplicationController extends Controller
                 'confirmed_accurate' => ($progress[$panel['key']]['confirmed_accurate'] ?? false) === true,
                 'confirmed_promis' => ($progress[$panel['key']]['confirmed_promis'] ?? false) === true,
                 'notes' => $progress[$panel['key']]['notes'] ?? '',
+                'no_rujukan' => $progress[$panel['key']]['no_rujukan'] ?? '',
+                'tarikh_surat' => $progress[$panel['key']]['tarikh_surat'] ?? '',
                 'agencies' => $progress[$panel['key']]['agencies'] ?? [],
                 'agency_dates' => $progress[$panel['key']]['agency_dates'] ?? [],
             ];
@@ -250,7 +260,7 @@ class RentalApplicationController extends Controller
         $contract->loadMissing('premise');
 
         if (! $contract->isPendingProceed()) {
-            abort(403, 'Permohonan ini tidak boleh dikemaskini kerana ia telah dihantar kepada HQ.');
+            abort(403, 'Permohonan ini tidak boleh dikemaskini kerana ia telah dihantar kepada Ibu Pejabat.');
         }
 
         if ($contract->premise?->negeri !== $admin->negeri) {

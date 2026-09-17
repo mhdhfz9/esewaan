@@ -154,7 +154,7 @@ class UserController extends Controller
             if (! $remainingActiveAdmins) {
                 return redirect()
                     ->route('users.index')
-                    ->with('error', 'Sekurang-kurangnya satu Admin aktif mesti kekal dalam sistem.');
+                    ->with('error', 'Sekurang-kurangnya satu Ibu Pejabat aktif mesti kekal dalam sistem.');
             }
         }
 
@@ -165,8 +165,8 @@ class UserController extends Controller
             $user,
             $wasActive ? 'account_deactivated' : 'account_activated',
             $wasActive
-                ? 'Akaun pengguna dinyahaktifkan oleh Admin.'
-                : 'Akaun pengguna diaktifkan semula oleh Admin.',
+                ? 'Akaun pengguna dinyahaktifkan oleh Ibu Pejabat.'
+                : 'Akaun pengguna diaktifkan semula oleh Ibu Pejabat.',
             performedBy: $admin,
         );
 
@@ -267,7 +267,7 @@ class UserController extends Controller
                         ->orWhere('role', 'like', $like);
 
                     $roleMatches = ListSearch::matchingKeys([
-                        'admin_hq' => 'Admin',
+                        'admin_hq' => 'Ibu Pejabat',
                         'admin_negeri' => 'Negeri',
                     ], $needle);
 
@@ -338,7 +338,7 @@ class UserController extends Controller
     private function roleLabel(string $role): string
     {
         return match ($role) {
-            'admin_hq' => 'Admin',
+            'admin_hq' => 'Ibu Pejabat',
             'admin_negeri' => 'Negeri',
             default => 'Tidak diketahui',
         };

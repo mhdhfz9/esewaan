@@ -99,6 +99,7 @@ class SidebarNotificationService
         return RentalContract::query()
             ->hqApproved()
             ->notSuperseded()
+            ->kontrakNotExpired()
             ->when(
                 $user->isAdminNegeri() && filled($user->negeri),
                 fn (Builder $query) => $query->whereHas('premise', fn (Builder $premiseQuery) => $premiseQuery->where('negeri', $user->negeri))

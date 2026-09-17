@@ -10,7 +10,7 @@
 <p id="users-count" class="text-sm text-slate-600">
     Menunjukkan <strong class="text-slate-800">{{ $totalUsers }}</strong> pengguna
     @if($showAdminSection)
-        (<strong class="text-slate-800">{{ $adminUsers->count() }}</strong> Admin,
+        (<strong class="text-slate-800">{{ $adminUsers->count() }}</strong> Ibu Pejabat,
         <strong class="text-slate-800">{{ $negeriUsers->count() }}</strong> Negeri)
     @endif
 </p>
@@ -18,8 +18,8 @@
 @if($showAdminSection)
 <section class="glass-card glass-table overflow-hidden">
     <div class="glass-divider-soft border-b px-4 py-3">
-        <h2 class="text-base font-semibold text-slate-900">Admin</h2>
-        <p class="mt-0.5 text-xs text-slate-500">Pengguna peranan Admin.</p>
+        <h2 class="text-base font-semibold text-slate-900">Ibu Pejabat</h2>
+        <p class="mt-0.5 text-xs text-slate-500">Pengguna peranan Ibu Pejabat.</p>
     </div>
     <div class="overflow-x-auto">
         <table class="w-full text-sm">
@@ -61,7 +61,7 @@
                 @empty
                 <tr>
                     <td colspan="5" class="px-4 py-10 text-center text-slate-500">
-                        Tiada pengguna Admin dijumpai.
+                        Tiada pengguna Ibu Pejabat dijumpai.
                     </td>
                 </tr>
                 @endforelse

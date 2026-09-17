@@ -22,10 +22,16 @@ function createDashboardContract(
         'kadar_sewa' => 1000,
     ]);
 
+    $hasRealContractDates = filled($sahSehingga);
+
     return RentalContract::query()->create([
         'premise_id' => $premise->id,
-        'tarikh_mula' => RentalContract::PLACEHOLDER_CONTRACT_DATE,
-        'tarikh_tamat' => RentalContract::PLACEHOLDER_CONTRACT_DATE,
+        'tarikh_mula' => $hasRealContractDates
+            ? now()->subMonths(2)->toDateString()
+            : RentalContract::PLACEHOLDER_CONTRACT_DATE,
+        'tarikh_tamat' => $hasRealContractDates
+            ? $sahSehingga
+            : RentalContract::PLACEHOLDER_CONTRACT_DATE,
         'kadar_sewa_bulanan' => 1000,
         'status_aktif' => 'dalam_proses',
         'workflow_tahap' => $workflow,
@@ -60,12 +66,35 @@ test('dashboard shows accurate counts based on current workflow data', function 
         ->assertViewHas('kontrakAktif', 2)
         ->assertViewHas('kontrakLapanBulan', 1)
         ->assertSee('Permohonan Baharu')
-        ->assertSee('Progress Permohonan')
+        ->assertSee('Dalam Tindakan')
+        ->assertSee('Status Tindakan')
+        ->assertSee('Belum Terima Permohonan')
+        ->assertSee('Sedia Draf Perjanjian')
+        ->assertSee('Semakan PUU')
+        ->assertSee('Tindakan Mati Setem')
         ->assertSee('Kontrak Aktif')
         ->assertSee('Kontrak &le; 8 Bulan', false)
+        ->assertDontSee('Dalam Tindakan – Mengikut Status')
         ->assertDontSee('Permohonan Terkini')
         ->assertDontSee('Status Aliran Kerja Permohonan')
         ->assertDontSee('Taburan permohonan mengikut peringkat proses');
+
+    $breakdown = $response->viewData('dalamTindakanByStatus');
+
+    expect($breakdown)->toHaveCount(13)
+        ->and(collect($breakdown)->firstWhere('key', \App\Support\StatusTindakan::SEDIA_DRAF_PERJANJIAN)['count'])->toBe(1)
+        ->and(collect($breakdown)->firstWhere('key', \App\Support\StatusTindakan::SEMAKAN_PUU)['count'])->toBe(1)
+        ->and(collect($breakdown)->sum('count'))->toBe(2);
+});
+
+test('dashboard dalam tindakan card links to status breakdown section', function () {
+    $admin = User::factory()->create(['role' => 'admin_hq']);
+
+    $this->actingAs($admin)
+        ->get(route('dashboard'))
+        ->assertSuccessful()
+        ->assertSee('href="#dalam-tindakan"', false)
+        ->assertSee('id="dalam-tindakan"', false);
 });
 
 test('dashboard excludes superseded contracts from active count', function () {

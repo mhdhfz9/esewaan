@@ -49,7 +49,12 @@
                         <td class="px-4 py-2.5 font-semibold text-slate-900">{{ $newRent !== null ? number_format((float) $newRent, 2) : '–' }}</td>
                     </tr>
                     <tr>
-                        <td class="px-4 py-2.5 font-medium text-slate-600">Sah Sehingga</td>
+                        <td class="px-4 py-2.5 font-medium text-slate-600">Tarikh Mula</td>
+                        <td class="px-4 py-2.5 text-slate-700">{{ $parent?->tarikh_mula_tawaran?->format('d/m/Y') ?? '–' }}</td>
+                        <td class="px-4 py-2.5 text-slate-900">{{ $contract->tarikh_mula_tawaran?->format('d/m/Y') ?? '–' }}</td>
+                    </tr>
+                    <tr>
+                        <td class="px-4 py-2.5 font-medium text-slate-600">Tarikh Akhir Tempoh Tawaran Penyewaan</td>
                         <td class="px-4 py-2.5 text-slate-700">{{ $parent?->sah_sehingga?->format('d/m/Y') ?? '–' }}</td>
                         <td class="px-4 py-2.5 text-slate-900">{{ $contract->sah_sehingga?->format('d/m/Y') ?? '–' }}</td>
                     </tr>

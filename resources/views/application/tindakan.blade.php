@@ -35,13 +35,13 @@
                     type="button"
                     id="submit-hq-button"
                     class="status-confirm-trigger glass-btn-primary rounded-xl px-5 py-2 text-sm font-medium"
-                    data-confirm-title="Hantar Permohonan ke Admin"
-                    data-confirm-message="Anda pasti mahu menghantar permohonan ini kepada Admin untuk semakan? Sila semak maklumat premis sebelum meneruskan."
+                    data-confirm-title="Hantar Permohonan ke Ibu Pejabat"
+                    data-confirm-message="Anda pasti mahu menghantar permohonan ini kepada Ibu Pejabat untuk semakan? Sila semak maklumat premis sebelum meneruskan."
                     data-confirm-form="submit-hq-form"
                     data-confirm-button="Ya, Hantar"
                     data-confirm-tone="success"
                 >
-                    Hantar ke Admin
+                    Hantar ke Ibu Pejabat
                 </button>
             </div>
         </div>
@@ -118,7 +118,7 @@
             if (!targetForm || !modal || !modalConfirm || !modalTitle || !modalMessage) return;
 
             if (trigger.id === 'submit-hq-button' && form && !window.ApplicationFormValidation?.validate(form)) {
-                showFormStatus('Sila lengkapkan semua medan bertanda biru/merah sebelum menghantar ke HQ.');
+                showFormStatus('Sila lengkapkan semua ruangan yang wajib diisi.');
                 return;
             }
 

@@ -2,12 +2,15 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\DownloadContractDocumentRequest;
 use App\Http\Requests\StoreContractDocumentRequest;
 use App\Models\ContractDocument;
 use App\Models\RentalContract;
 use App\Services\ActivityLogger;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class ContractDocumentController extends Controller
 {
@@ -47,6 +50,17 @@ class ContractDocumentController extends Controller
         return redirect()
             ->route('status-permohonan.index')
             ->with('success', 'Dokumen berjaya dimuat naik.');
+    }
+
+    public function show(DownloadContractDocumentRequest $request, RentalContract $contract, ContractDocument $document): StreamedResponse
+    {
+        abort_unless(Storage::disk('public')->exists($document->path), 404);
+
+        return Storage::disk('public')->response(
+            $document->path,
+            $document->nama_fail,
+            ['Content-Type' => 'application/pdf'],
+        );
     }
 
     private function sanitizeFilename(string $name): string

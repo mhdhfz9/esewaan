@@ -12,9 +12,9 @@
     </style>
 </head>
 <body>
-    <h2>Permohonan Berjaya Dihantar ke Admin</h2>
+    <h2>Permohonan Berjaya Dihantar ke Ibu Pejabat</h2>
     <p>Assalamualaikum <strong>{{ $submittedBy->name }}</strong>,</p>
-    <p>Permohonan sewaan berikut telah dihantar kepada Admin untuk semakan.</p>
+    <p>Permohonan sewaan berikut telah dihantar kepada Ibu Pejabat untuk semakan.</p>
 
     <table>
         <tr>

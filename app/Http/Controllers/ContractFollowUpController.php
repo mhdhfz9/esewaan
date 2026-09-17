@@ -133,7 +133,7 @@ class ContractFollowUpController extends Controller
         }
 
         if (! $contract->isPendingProceed()) {
-            abort(403, 'Permohonan ini tidak boleh dibatalkan kerana ia telah dihantar kepada HQ.');
+            abort(403, 'Permohonan ini tidak boleh dibatalkan kerana ia telah dihantar kepada Ibu Pejabat.');
         }
 
         if ($contract->premise?->negeri !== $user->negeri) {

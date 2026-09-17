@@ -2,7 +2,7 @@
     <div class="glass-divider border-b px-6 py-4">
         <h2 class="text-lg font-semibold text-slate-900">Langkah Tindakan</h2>
         <p class="mt-1 text-xs text-slate-600">
-            Lengkapkan semua langkah tindakan sebelum menghantar permohonan kepada HQ.
+            Lengkapkan semua langkah tindakan sebelum menghantar permohonan kepada Ibu Pejabat.
         </p>
     </div>
 
@@ -26,6 +26,7 @@
                     data-step="{{ $panel['number'] }}"
                     data-step-key="{{ $panel['key'] }}"
                     @if($panel['has_agency_checklist']) data-requires-agencies="1" @endif
+                    @if($panel['key'] === \App\Support\AdminProceedSteps::STEP_BORANG_JRP) data-confirmations-complete-step="1" @endif
                 >
                     <div class="mb-5">
                         <p class="text-xs font-medium uppercase tracking-wide text-slate-500">Langkah {{ $panel['position'] }} / {{ $totalActiveSteps }}</p>
@@ -35,7 +36,6 @@
 
                     @if($panel['has_agency_checklist'])
                         <div class="proceed-agency-checklist glass-subtle mb-5 rounded-2xl border border-slate-300 p-4">
-                            <p class="mb-3 text-sm font-medium text-slate-900">Keluarkan surat kepada agensi berikut dengan dikepilkan Borang JRP</p>
                             <div class="space-y-2.5">
                                 @foreach(\App\Support\AdminProceedSteps::agencyDefinitions() as $agencyKey => $agencyLabel)
                                     @php
@@ -75,7 +75,6 @@
                                                     value="{{ $agencyDate }}"
                                                     class="proceed-agency-date glass-input w-full rounded-lg px-2.5 py-1.5 text-sm sm:w-40"
                                                     data-agency-key="{{ $agencyKey }}"
-                                                    readonly
                                                     @disabled(! $agencyChecked)
                                                 >
                                             </div>
@@ -84,6 +83,35 @@
                                 @endforeach
                             </div>
                             <p class="proceed-agency-hint mt-3 hidden text-xs text-amber-700">Sila tandakan semua agensi di atas sebelum mengesahkan langkah ini.</p>
+                        </div>
+                    @endif
+
+                    @if($panel['requires_reference'] ?? false)
+                        <div class="mb-5 grid grid-cols-1 gap-4 sm:grid-cols-2">
+                            <div>
+                                <label for="proceed_no_rujukan_{{ $panel['key'] }}" class="mb-1.5 block text-sm font-medium text-slate-700">No. Rujukan *</label>
+                                <input
+                                    type="text"
+                                    name="proceed_steps[{{ $panel['key'] }}][no_rujukan]"
+                                    id="proceed_no_rujukan_{{ $panel['key'] }}"
+                                    value="{{ old('proceed_steps.'.$panel['key'].'.no_rujukan', $panel['no_rujukan'] ?? '') }}"
+                                    required
+                                    maxlength="100"
+                                    placeholder="Cth: AADK/BKP/PB 200-3/02"
+                                    class="proceed-step-no-rujukan glass-input w-full rounded-xl px-3 py-2 text-sm"
+                                >
+                            </div>
+                            <div>
+                                <label for="proceed_tarikh_surat_{{ $panel['key'] }}" class="mb-1.5 block text-sm font-medium text-slate-700">Tarikh Surat *</label>
+                                <input
+                                    type="date"
+                                    name="proceed_steps[{{ $panel['key'] }}][tarikh_surat]"
+                                    id="proceed_tarikh_surat_{{ $panel['key'] }}"
+                                    value="{{ old('proceed_steps.'.$panel['key'].'.tarikh_surat', $panel['tarikh_surat'] ?? '') }}"
+                                    required
+                                    class="proceed-step-tarikh-surat glass-input w-full rounded-xl px-3 py-2 text-sm"
+                                >
+                            </div>
                         </div>
                     @endif
 
@@ -97,7 +125,15 @@
                                 class="proceed-step-confirmed-accurate mt-0.5 h-4 w-4 rounded border-white/60 text-slate-800 focus:ring-slate-500/30"
                             >
                             <span class="text-sm text-slate-700">
-                                <span class="font-medium text-slate-900">Saya mengesahkan maklumat ini tepat dan benar</span>
+                                <span class="font-medium text-slate-900">
+                                    @if($panel['position'] === 1)
+                                        Saya mengesahkan surat niat telah dihantar ke premis
+                                    @elseif($panel['key'] === \App\Support\AdminProceedSteps::STEP_BORANG_JRP)
+                                        Saya mengesahkan borang JRP telah diisi dan dimuat naik ke PROMIS
+                                    @else
+                                        Saya mengesahkan maklumat ini tepat dan benar
+                                    @endif
+                                </span>
                             </span>
                         </label>
 
@@ -110,11 +146,20 @@
                                 class="proceed-step-confirmed-promis mt-0.5 h-4 w-4 rounded border-white/60 text-slate-800 focus:ring-slate-500/30"
                             >
                             <span class="text-sm text-slate-700">
-                                <span class="font-medium text-slate-900">Maklumat ini telah dimuat naik ke dalam sistem PROMIS.</span>
+                                <span class="font-medium text-slate-900">
+                                    @if($panel['position'] === 1)
+                                        Surat tawaran pemilik premis telah diterima dan dimuat naik ke PROMIS
+                                    @elseif($panel['key'] === \App\Support\AdminProceedSteps::STEP_BORANG_JRP)
+                                        Saya mengesahkan maklumat ini tepat dan benar
+                                    @else
+                                        Maklumat ini telah dimuat naik ke dalam sistem PROMIS.
+                                    @endif
+                                </span>
                             </span>
                         </label>
                     </div>
 
+                    @if($panel['key'] !== \App\Support\AdminProceedSteps::STEP_BORANG_JRP)
                     <label class="proceed-step-checkbox-label glass-subtle flex cursor-pointer items-start gap-3 rounded-2xl border border-slate-300 px-4 py-4 transition-all hover:border-slate-400 hover:bg-white/45">
                         <input
                             type="checkbox"
@@ -127,6 +172,7 @@
                             <span class="font-medium text-slate-900">Saya mengesahkan langkah ini telah selesai dilaksanakan.</span>
                         </span>
                     </label>
+                    @endif
 
                     <div class="mt-5">
                         <label for="proceed_notes_{{ $panel['key'] }}" class="mb-1.5 block text-sm font-medium text-slate-700">Catatan</label>

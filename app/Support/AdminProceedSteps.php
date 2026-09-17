@@ -95,6 +95,7 @@ class AdminProceedSteps
     public static function agencyDefinitions(): array
     {
         return [
+            'surat_jpph' => 'Surat JPPH',
             'kpksm' => 'Ketua Pegawai Keselamatan Kerajaan Malaysia',
             'bomba' => 'Jabatan Bomba dan Penyelamat Malaysia',
             'jktg' => 'Jabatan Ketua Pengarah Tanah dan Galian Persekutuan',
@@ -111,6 +112,7 @@ class AdminProceedSteps
     public static function agenciesRequiringDate(): array
     {
         return [
+            'surat_jpph',
             'kpksm',
             'bomba',
             'jktg',
@@ -224,6 +226,8 @@ class AdminProceedSteps
                 'completed_at' => $entry['completed_at'] ?? null,
                 'completed_by_user_id' => isset($entry['completed_by_user_id']) ? (int) $entry['completed_by_user_id'] : null,
                 'notes' => filled($entry['notes'] ?? null) ? (string) $entry['notes'] : null,
+                'no_rujukan' => filled($entry['no_rujukan'] ?? null) ? (string) $entry['no_rujukan'] : null,
+                'tarikh_surat' => filled($entry['tarikh_surat'] ?? null) ? (string) $entry['tarikh_surat'] : null,
                 'agencies' => $key === self::STEP_SURAT_AGENSI
                     ? self::normalizeAgenciesInput(is_array($entry['agencies'] ?? null) ? $entry['agencies'] : [])
                     : [],
@@ -247,9 +251,12 @@ class AdminProceedSteps
         return ($progress[$key]['completed'] ?? false) === true;
     }
 
-    public static function shouldCompleteStepFromInput(array $stepInput, string $stepKey): bool
+    public static function shouldCompleteStepFromInput(array $stepInput, string $stepKey, ?RentalContract $contract = null): bool
     {
-        if (! filter_var($stepInput['completed'] ?? false, FILTER_VALIDATE_BOOLEAN)) {
+        $completedConfirmed = $stepKey === self::STEP_BORANG_JRP
+            || filter_var($stepInput['completed'] ?? false, FILTER_VALIDATE_BOOLEAN);
+
+        if (! $completedConfirmed) {
             return false;
         }
 
@@ -259,6 +266,16 @@ class AdminProceedSteps
 
         if (! filter_var($stepInput['confirmed_promis'] ?? false, FILTER_VALIDATE_BOOLEAN)) {
             return false;
+        }
+
+        if ($contract !== null && self::stepRequiresReferenceFields($contract, $stepKey)) {
+            if (! filled($stepInput['no_rujukan'] ?? null)) {
+                return false;
+            }
+
+            if (! filled($stepInput['tarikh_surat'] ?? null)) {
+                return false;
+            }
         }
 
         if ($stepKey === self::STEP_SURAT_AGENSI) {
@@ -274,6 +291,18 @@ class AdminProceedSteps
         }
 
         return true;
+    }
+
+    public static function firstActiveStepKey(RentalContract $contract): string
+    {
+        $firstStep = self::activeStepsFor($contract)[0] ?? 1;
+
+        return self::keyForStep($firstStep);
+    }
+
+    public static function stepRequiresReferenceFields(RentalContract $contract, string $stepKey): bool
+    {
+        return $stepKey === self::firstActiveStepKey($contract);
     }
 
     public static function isNavigable(RentalContract $contract, int $step): bool
@@ -389,11 +418,14 @@ class AdminProceedSteps
                 'description' => $definition['description'],
                 'has_notes' => true,
                 'has_agency_checklist' => ($definition['has_agency_checklist'] ?? false) === true,
+                'requires_reference' => $index === 0,
                 'completed' => ($progress[$key]['completed'] ?? false) === true,
                 'marked_complete' => ($progress[$key]['marked_complete'] ?? $progress[$key]['completed'] ?? false) === true,
                 'confirmed_accurate' => ($progress[$key]['confirmed_accurate'] ?? false) === true,
                 'confirmed_promis' => ($progress[$key]['confirmed_promis'] ?? false) === true,
                 'notes' => (string) ($progress[$key]['notes'] ?? ''),
+                'no_rujukan' => (string) ($progress[$key]['no_rujukan'] ?? ''),
+                'tarikh_surat' => (string) ($progress[$key]['tarikh_surat'] ?? ''),
                 'agencies' => $key === self::STEP_SURAT_AGENSI
                     ? ($progress[$key]['agencies'] ?? self::normalizeAgenciesInput([]))
                     : [],
@@ -429,7 +461,7 @@ class AdminProceedSteps
             $markedComplete = array_key_exists('completed', $stepInput)
                 ? filter_var($stepInput['completed'] ?? false, FILTER_VALIDATE_BOOLEAN)
                 : (bool) ($existing['marked_complete'] ?? $existing['completed'] ?? false);
-            $isCompleted = self::shouldCompleteStepFromInput($stepInput, $key);
+            $isCompleted = self::shouldCompleteStepFromInput($stepInput, $key, $contract);
 
             $entry = [
                 'completed' => $isCompleted,
@@ -443,6 +475,12 @@ class AdminProceedSteps
                 'notes' => array_key_exists('notes', $stepInput)
                     ? (filled($stepInput['notes']) ? (string) $stepInput['notes'] : null)
                     : ($existing['notes'] ?? null),
+                'no_rujukan' => array_key_exists('no_rujukan', $stepInput)
+                    ? (filled($stepInput['no_rujukan']) ? (string) $stepInput['no_rujukan'] : null)
+                    : ($existing['no_rujukan'] ?? null),
+                'tarikh_surat' => array_key_exists('tarikh_surat', $stepInput)
+                    ? (filled($stepInput['tarikh_surat']) ? (string) $stepInput['tarikh_surat'] : null)
+                    : ($existing['tarikh_surat'] ?? null),
             ];
 
             if ($isCompleted) {
@@ -474,6 +512,8 @@ class AdminProceedSteps
         }
 
         $contract->update(['admin_proceed_progress' => $progress]);
+
+        self::syncSuratNiatContractFields($contract, $progress);
     }
 
     /**
@@ -497,6 +537,8 @@ class AdminProceedSteps
             'completed_at' => now()->toIso8601String(),
             'completed_by_user_id' => $userId,
             'notes' => filled($stepInput['notes'] ?? null) ? (string) $stepInput['notes'] : null,
+            'no_rujukan' => filled($stepInput['no_rujukan'] ?? null) ? (string) $stepInput['no_rujukan'] : null,
+            'tarikh_surat' => filled($stepInput['tarikh_surat'] ?? null) ? (string) $stepInput['tarikh_surat'] : null,
         ];
 
         if ($key === self::STEP_SURAT_AGENSI) {
@@ -511,6 +553,26 @@ class AdminProceedSteps
         $progress[$key] = $entry;
 
         $contract->update(['admin_proceed_progress' => $progress]);
+
+        self::syncSuratNiatContractFields($contract, $progress);
+    }
+
+    /**
+     * Keep legacy contract columns in sync when reference details are captured on langkah 1.
+     *
+     * @param  array<string, mixed>  $progress
+     */
+    private static function syncSuratNiatContractFields(RentalContract $contract, array $progress): void
+    {
+        $referenceKey = self::firstActiveStepKey($contract);
+        $referenceStep = is_array($progress[$referenceKey] ?? null)
+            ? $progress[$referenceKey]
+            : [];
+
+        $contract->update([
+            'no_fail_rujukan' => filled($referenceStep['no_rujukan'] ?? null) ? (string) $referenceStep['no_rujukan'] : $contract->no_fail_rujukan,
+            'tarikh_surat_niat' => filled($referenceStep['tarikh_surat'] ?? null) ? (string) $referenceStep['tarikh_surat'] : $contract->tarikh_surat_niat,
+        ]);
     }
 
     /**

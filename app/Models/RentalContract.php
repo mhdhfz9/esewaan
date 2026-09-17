@@ -43,6 +43,7 @@ class RentalContract extends Model
         'workflow_tahap',
         'semakan_count',
         'kategori_permohonan',
+        'tarikh_mula_tawaran',
         'sah_sehingga',
         'admin_proceed_progress',
         'delete_reason',
@@ -56,6 +57,9 @@ class RentalContract extends Model
         'withdrawal_resolution_note',
         'hq_approved_at',
         'hq_jrp_checklist',
+        'negeri_draft_acknowledgements',
+        'hq_draft_acknowledgements',
+        'negeri_mati_setem_acknowledgements',
         'superseded_at',
         'superseded_by_contract_id',
         'admin_negeri_user_id',
@@ -81,9 +85,13 @@ class RentalContract extends Model
 
     public const WORKFLOW_SEMAKAN_PUU = 'semakan_puu';
 
+    public const WORKFLOW_PINDAAN_BERDASARKAN_PUU = 'pindaan_berdasarkan_puu';
+
     public const WORKFLOW_DRAF_PERJANJIAN_LULUS = 'draf_perjanjian_lulus';
 
     public const WORKFLOW_DRAF_DIKEMBALIKAN_HQ = 'draf_dikembalikan_hq';
+
+    public const WORKFLOW_MATI_SETEM = 'mati_setem';
 
     /**
      * Workflow stages handled within the "Senarai Permohonan" / "Status Permohonan"
@@ -96,8 +104,10 @@ class RentalContract extends Model
         return [
             self::WORKFLOW_PENYEDIAAN_DRAF_PERJANJIAN,
             self::WORKFLOW_SEMAKAN_PUU,
+            self::WORKFLOW_PINDAAN_BERDASARKAN_PUU,
             self::WORKFLOW_DRAF_PERJANJIAN_LULUS,
             self::WORKFLOW_DRAF_DIKEMBALIKAN_HQ,
+            self::WORKFLOW_MATI_SETEM,
         ];
     }
 
@@ -110,8 +120,19 @@ class RentalContract extends Model
     public static function hqDraftActionWorkflows(): array
     {
         return [
-            self::WORKFLOW_PENYEDIAAN_DRAF_PERJANJIAN,
             self::WORKFLOW_SEMAKAN_PUU,
+        ];
+    }
+
+    /**
+     * Draft-agreement stages where HQ marks pindaan as complete (Draf Lulus).
+     *
+     * @return list<string>
+     */
+    public static function hqPindaanCompletionWorkflows(): array
+    {
+        return [
+            self::WORKFLOW_PINDAAN_BERDASARKAN_PUU,
         ];
     }
 
@@ -151,12 +172,74 @@ class RentalContract extends Model
         return $query->whereNull('superseded_at');
     }
 
+    /**
+     * HQ-approved kontrak whose contract end date has passed.
+     *
+     * @param  Builder<RentalContract>  $query
+     * @return Builder<RentalContract>
+     */
+    public function scopeKontrakExpired(Builder $query): Builder
+    {
+        $today = Carbon::today()->toDateString();
+        $placeholder = self::PLACEHOLDER_CONTRACT_DATE;
+
+        return $query->where(function (Builder $expiredQuery) use ($today, $placeholder) {
+            $expiredQuery
+                ->where(function (Builder $realDatesQuery) use ($today, $placeholder) {
+                    $realDatesQuery
+                        ->whereDate('tarikh_mula', '!=', $placeholder)
+                        ->whereDate('tarikh_tamat', '<', $today);
+                })
+                ->orWhere(function (Builder $offerDatesQuery) use ($today, $placeholder) {
+                    $offerDatesQuery
+                        ->whereDate('tarikh_mula', $placeholder)
+                        ->whereNotNull('sah_sehingga')
+                        ->whereDate('sah_sehingga', '<', $today);
+                });
+        });
+    }
+
+    /**
+     * HQ-approved kontrak that is still within its contract / offer period.
+     *
+     * Real agreement dates use tarikh_tamat. Placeholder dates use sah_sehingga
+     * (tarikh akhir tempoh tawaran). Once that end date has passed, the kontrak
+     * moves to Sejarah automatically.
+     *
+     * @param  Builder<RentalContract>  $query
+     * @return Builder<RentalContract>
+     */
+    public function scopeKontrakNotExpired(Builder $query): Builder
+    {
+        $today = Carbon::today()->toDateString();
+        $placeholder = self::PLACEHOLDER_CONTRACT_DATE;
+
+        return $query->where(function (Builder $activeQuery) use ($today, $placeholder) {
+            $activeQuery
+                ->where(function (Builder $realDatesQuery) use ($today, $placeholder) {
+                    $realDatesQuery
+                        ->whereDate('tarikh_mula', '!=', $placeholder)
+                        ->whereDate('tarikh_tamat', '>=', $today);
+                })
+                ->orWhere(function (Builder $offerDatesQuery) use ($today, $placeholder) {
+                    $offerDatesQuery
+                        ->whereDate('tarikh_mula', $placeholder)
+                        ->where(function (Builder $stillValidOffer) use ($today) {
+                            $stillValidOffer
+                                ->whereNull('sah_sehingga')
+                                ->orWhereDate('sah_sehingga', '>=', $today);
+                        });
+                });
+        });
+    }
+
     protected function casts(): array
     {
         return [
             'tarikh_mula' => 'date',
             'tarikh_tamat' => 'date',
             'tarikh_surat_niat' => 'date',
+            'tarikh_mula_tawaran' => 'date',
             'sah_sehingga' => 'date',
             'kadar_sewa_bulanan' => 'decimal:2',
             'keluasan_mp' => 'decimal:2',
@@ -166,6 +249,9 @@ class RentalContract extends Model
             'withdrawal_resolved_at' => 'datetime',
             'hq_approved_at' => 'datetime',
             'hq_jrp_checklist' => 'array',
+            'negeri_draft_acknowledgements' => 'array',
+            'hq_draft_acknowledgements' => 'array',
+            'negeri_mati_setem_acknowledgements' => 'array',
             'superseded_at' => 'datetime',
         ];
     }
@@ -339,7 +425,7 @@ class RentalContract extends Model
     }
 
     /**
-     * Whether the "Hantar ke Admin" action should appear in the list.
+     * Whether the "Hantar ke Ibu Pejabat" action should appear in the list.
      * Follow-up applications (pindah/lanjutan) always show the button while
      * pending proceed; validation runs when the admin clicks submit.
      */
@@ -388,6 +474,21 @@ class RentalContract extends Model
         return $this->workflow_tahap === self::WORKFLOW_SEMAKAN_PUU;
     }
 
+    public function isPindaanBerdasarkanPuu(): bool
+    {
+        return $this->workflow_tahap === self::WORKFLOW_PINDAAN_BERDASARKAN_PUU;
+    }
+
+    public function canUploadDraftAgreement(): bool
+    {
+        return $this->isPenyediaanDrafPerjanjian();
+    }
+
+    public function isAwaitingHqPindaanCompletion(): bool
+    {
+        return in_array($this->workflow_tahap, self::hqPindaanCompletionWorkflows(), true);
+    }
+
     public function isInDraftAgreementStage(): bool
     {
         return in_array($this->workflow_tahap, self::draftAgreementWorkflows(), true);
@@ -408,6 +509,11 @@ class RentalContract extends Model
         return $this->workflow_tahap === self::WORKFLOW_DRAF_DIKEMBALIKAN_HQ;
     }
 
+    public function isMatiSetem(): bool
+    {
+        return $this->workflow_tahap === self::WORKFLOW_MATI_SETEM;
+    }
+
     public function semakanLabel(): string
     {
         return 'Semakan '.max(1, (int) $this->semakan_count);
@@ -419,10 +525,13 @@ class RentalContract extends Model
     public function draftAgreementCurrentStepIndex(): int
     {
         return match (true) {
-            $this->isHqApproved() => 5,
-            $this->isDrafDikembalikanHq() => 4,
-            $this->isDrafPerjanjianLulus() => 3,
-            $this->isPenyediaanDrafPerjanjian(), $this->isSemakanPuu() => 2,
+            $this->isHqApproved() => 8,
+            $this->isMatiSetem() => 7,
+            $this->isDrafDikembalikanHq() => 6,
+            $this->isDrafPerjanjianLulus() => 5,
+            $this->isPindaanBerdasarkanPuu() => 4,
+            $this->isSemakanPuu() => 3,
+            $this->isPenyediaanDrafPerjanjian() => 2,
             $this->isPendingHqReview() => 1,
             default => 0,
         };
@@ -437,16 +546,27 @@ class RentalContract extends Model
     {
         $currentIndex = $this->draftAgreementCurrentStepIndex();
 
-        $draftDescription = $this->isSemakanPuu()
+        $puuDescription = $this->isSemakanPuu()
             ? $this->semakanLabel()
-            : 'Penyediaan & semakan PUU';
+            : 'Semakan oleh PUU';
+
+        $pindaanDescription = $this->isPindaanBerdasarkanPuu()
+            ? 'Pindaan mengikut ulasan PUU'
+            : 'Menunggu kelulusan PUU';
+
+        $drafLulusDescription = $this->isDrafPerjanjianLulus()
+            ? 'Selesai'
+            : 'Draf perjanjian diluluskan';
 
         $steps = [
             ['label' => 'Permohonan Baru', 'description' => 'Butiran permohonan'],
-            ['label' => 'Semakan HQ', 'description' => 'Pengesahan permohonan'],
-            ['label' => 'Penyediaan Draf', 'description' => $draftDescription],
-            ['label' => 'Draf Lulus', 'description' => 'Draf perjanjian diluluskan'],
+            ['label' => 'Semakan Ibu Pejabat', 'description' => 'Pengesahan permohonan'],
+            ['label' => 'Penyediaan Draf', 'description' => 'Penyediaan draf perjanjian'],
+            ['label' => 'Dalam tindakan PUU', 'description' => $puuDescription],
+            ['label' => 'Pindaan Berdasarkan PUU', 'description' => $pindaanDescription],
+            ['label' => 'Draf Lulus', 'description' => $drafLulusDescription],
             ['label' => 'Pengesahan & Tandatangan', 'description' => 'Dokumen ditandatangani'],
+            ['label' => 'Mati Setem', 'description' => 'Setem dimatikan'],
             ['label' => 'Selesai', 'description' => 'Kontrak sewaan'],
         ];
 
@@ -540,6 +660,19 @@ class RentalContract extends Model
             ApplicationCategories::PINDAH => 'Dalam Tindakan Pindah',
             default => 'Dalam Tindakan Lanjutan/Pindah',
         };
+    }
+
+    public function followUpWorkspaceUrl(): string
+    {
+        if ($this->isPendingProceed()) {
+            return route('application.edit', $this);
+        }
+
+        if ($this->isHqApproved()) {
+            return route('kontrak-sewaan.show', $this);
+        }
+
+        return route('status-permohonan.review', $this);
     }
 
     public function parentRent(): ?float
@@ -714,17 +847,21 @@ class RentalContract extends Model
         }
 
         if ($this->isReadyToSendToHq()) {
-            return 'Permohonan sedia untuk dihantar ke Admin';
+            return 'Permohonan sedia untuk dihantar ke Ibu Pejabat';
         }
 
         return match ($this->workflow_tahap) {
             self::WORKFLOW_MENUNGGU_PROCEED_NEGERI => 'Menunggu langkah tindakan',
-            self::WORKFLOW_MENUNGGU_SEMAKAN_HQ => 'Menunggu semakan HQ',
+            self::WORKFLOW_MENUNGGU_SEMAKAN_HQ => 'Menunggu semakan Ibu Pejabat',
             self::WORKFLOW_MENUNGGU_SEMAKAN_NEGERI => 'Menunggu semakan pentadbir negeri',
-            self::WORKFLOW_PENYEDIAAN_DRAF_PERJANJIAN => 'Penyediaan Draf Perjanjian',
+            self::WORKFLOW_PENYEDIAAN_DRAF_PERJANJIAN => (int) $this->semakan_count > 0
+                ? 'Draf perjanjian dibatalkan PUU'
+                : 'Penyediaan Draf Perjanjian',
             self::WORKFLOW_SEMAKAN_PUU => $this->semakanLabel(),
-            self::WORKFLOW_DRAF_PERJANJIAN_LULUS => 'Draf Perjanjian Lulus Tanpa Pindaan',
-            self::WORKFLOW_DRAF_DIKEMBALIKAN_HQ => 'Draf Perjanjian Dikembalikan ke AADK',
+            self::WORKFLOW_PINDAAN_BERDASARKAN_PUU => 'Pindaan Berdasarkan PUU',
+            self::WORKFLOW_DRAF_PERJANJIAN_LULUS => 'Dokumen Perjanjian dikembalikan ke Cawangan Pembangunan AADK',
+            self::WORKFLOW_DRAF_DIKEMBALIKAN_HQ => 'Dokumen Perjanjian dikembalikan ke Cawangan Pembangunan',
+            self::WORKFLOW_MATI_SETEM => 'Menunggu Mati Setem',
             default => match ($this->status_aktif) {
                 'aktif' => 'Aktif',
                 'tamat_tempoh' => 'Tamat tempoh',
@@ -782,14 +919,18 @@ class RentalContract extends Model
     {
         return match ($this->workflow_tahap) {
             self::WORKFLOW_MENUNGGU_PROCEED_NEGERI => $this->isProceedComplete()
-                ? 'Permohonan sedia untuk dihantar ke HQ'
+                ? 'Permohonan sedia untuk dihantar ke Ibu Pejabat'
                 : 'Menunggu langkah tindakan pentadbir negeri',
-            self::WORKFLOW_MENUNGGU_SEMAKAN_HQ => 'Menunggu semakan HQ',
+            self::WORKFLOW_MENUNGGU_SEMAKAN_HQ => 'Menunggu semakan Ibu Pejabat',
             self::WORKFLOW_MENUNGGU_SEMAKAN_NEGERI => 'Menunggu semakan pentadbir negeri',
-            self::WORKFLOW_PENYEDIAAN_DRAF_PERJANJIAN => 'Penyediaan Draf Perjanjian',
+            self::WORKFLOW_PENYEDIAAN_DRAF_PERJANJIAN => (int) $this->semakan_count > 0
+                ? 'Draf perjanjian dibatalkan PUU'
+                : 'Penyediaan Draf Perjanjian',
             self::WORKFLOW_SEMAKAN_PUU => $this->semakanLabel(),
-            self::WORKFLOW_DRAF_PERJANJIAN_LULUS => 'Draf Perjanjian Lulus Tanpa Pindaan',
-            self::WORKFLOW_DRAF_DIKEMBALIKAN_HQ => 'Draf Perjanjian Dikembalikan ke AADK',
+            self::WORKFLOW_PINDAAN_BERDASARKAN_PUU => 'Pindaan Berdasarkan PUU',
+            self::WORKFLOW_DRAF_PERJANJIAN_LULUS => 'Dokumen Perjanjian dikembalikan ke Cawangan Pembangunan AADK',
+            self::WORKFLOW_DRAF_DIKEMBALIKAN_HQ => 'Dokumen Perjanjian dikembalikan ke Cawangan Pembangunan',
+            self::WORKFLOW_MATI_SETEM => 'Menunggu Mati Setem',
             default => $this->workflow_tahap ?? '–',
         };
     }
@@ -832,9 +973,9 @@ class RentalContract extends Model
 
     public function isExpired(): bool
     {
-        return $this->tarikh_tamat
-            && ! $this->usesPlaceholderContractDates()
-            && $this->tarikh_tamat->isPast();
+        $end = $this->contractEndDate();
+
+        return $end !== null && $end->startOfDay()->lt(Carbon::today());
     }
 
     public function contractEndDate(): ?Carbon
@@ -860,8 +1001,12 @@ class RentalContract extends Model
             }
         }
 
+        if ($this->tarikh_mula_tawaran && $this->sah_sehingga) {
+            return $this->tarikh_mula_tawaran->format('d/m/Y').' – '.$this->sah_sehingga->format('d/m/Y');
+        }
+
         if ($this->sah_sehingga) {
-            return 'Sah sehingga '.$this->sah_sehingga->format('d/m/Y');
+            return $this->sah_sehingga->format('d/m/Y');
         }
 
         return '–';
@@ -899,10 +1044,17 @@ class RentalContract extends Model
         return (int) Carbon::today()->diffInDays($end, false);
     }
 
+    public function isContractEndWithinThreeMonths(): bool
+    {
+        $days = $this->daysUntilContractEnd();
+
+        return $days !== null && $days < 90;
+    }
+
     public function isContractEndWithinEightMonths(): bool
     {
         $days = $this->daysUntilContractEnd();
 
-        return $days !== null && $days >= 0 && $days <= 240;
+        return $days !== null && $days >= 0 && $days < 240;
     }
 }

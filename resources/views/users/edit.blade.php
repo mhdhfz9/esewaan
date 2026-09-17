@@ -36,7 +36,7 @@
                     class="glass-input w-full rounded-xl px-3 py-2 text-sm">
                     <option value="admin_negeri" @selected($selectedRole === 'admin_negeri')>Negeri</option>
                     @if(! auth()->user()->isAdminNegeri())
-                    <option value="admin_hq" @selected($selectedRole === 'admin_hq')>Admin</option>
+                    <option value="admin_hq" @selected($selectedRole === 'admin_hq')>Ibu Pejabat</option>
                     @endif
                 </select>
                 @error('role')

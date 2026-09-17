@@ -23,7 +23,7 @@ class StoreRentalApplicationRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'kategori_permohonan' => ['required', Rule::in([ApplicationCategories::BARU])],
+            'kategori_permohonan' => ['required', Rule::in(ApplicationCategories::values())],
             'negeri' => ['required', 'string', 'max:100'],
             'nama_ptj' => ['required', 'string', 'max:255'],
             'alamat_penuh' => ['required', 'string', 'max:65535'],
@@ -31,7 +31,8 @@ class StoreRentalApplicationRequest extends FormRequest
             'jenis_bangunan' => ['required', Rule::in(BuildingTypes::values())],
             'kadar_sewa' => ['required', 'numeric', 'min:0', 'max:9999999.99'],
             'keluasan_mp' => ['required', 'numeric', 'min:0', 'max:9999999.99'],
-            'sah_sehingga' => ['required', 'date'],
+            'tarikh_mula_tawaran' => ['required', 'date'],
+            'sah_sehingga' => ['required', 'date', 'after_or_equal:tarikh_mula_tawaran'],
         ];
     }
 
@@ -42,7 +43,7 @@ class StoreRentalApplicationRequest extends FormRequest
     {
         return [
             'kategori_permohonan.required' => 'Sila pilih kategori permohonan.',
-            'kategori_permohonan.in' => 'Permohonan baharu mesti berkategori Baru.',
+            'kategori_permohonan.in' => 'Kategori permohonan tidak sah.',
             'negeri.required' => 'Negeri diperlukan.',
             'nama_ptj.required' => 'Nama premis diperlukan.',
             'alamat_penuh.required' => 'Alamat penuh premis diperlukan.',
@@ -55,16 +56,12 @@ class StoreRentalApplicationRequest extends FormRequest
             'keluasan_mp.required' => 'Keluasan (mps) diperlukan.',
             'keluasan_mp.numeric' => 'Keluasan (mps) mesti nombor yang sah.',
             'keluasan_mp.min' => 'Keluasan (mps) tidak boleh kurang daripada 0.',
-            'sah_sehingga.required' => 'Tarikh sah sehingga diperlukan.',
-            'sah_sehingga.date' => 'Tarikh sah sehingga mesti tarikh yang sah.',
+            'tarikh_mula_tawaran.required' => 'Tarikh mula diperlukan.',
+            'tarikh_mula_tawaran.date' => 'Tarikh mula mesti tarikh yang sah.',
+            'sah_sehingga.required' => 'Tarikh akhir tempoh tawaran penyewaan diperlukan.',
+            'sah_sehingga.date' => 'Tarikh akhir tempoh tawaran penyewaan mesti tarikh yang sah.',
+            'sah_sehingga.after_or_equal' => 'Tarikh akhir tempoh tawaran penyewaan mesti pada atau selepas tarikh mula.',
         ];
-    }
-
-    protected function prepareForValidation(): void
-    {
-        $this->merge([
-            'kategori_permohonan' => ApplicationCategories::BARU,
-        ]);
     }
 
     public function withValidator(Validator $validator): void

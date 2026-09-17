@@ -48,7 +48,7 @@ class AdminProceedController extends Controller
 
         $contract = $contract->fresh(['premise', 'submittedBy']);
 
-        if (AdminProceedSteps::shouldCompleteStepFromInput($stepInput, $stepKey)) {
+        if (AdminProceedSteps::shouldCompleteStepFromInput($stepInput, $stepKey, $contract)) {
             AdminProceedSteps::completeStepFromInput(
                 $contract,
                 $currentStep,
@@ -69,7 +69,7 @@ class AdminProceedController extends Controller
         $nextStep = AdminProceedSteps::nextStep($contract, $currentStep) ?? $currentStep;
 
         $message = $contract->isProceedComplete()
-            ? 'Semua langkah tindakan selesai. Permohonan sedia untuk dihantar ke HQ dari senarai status.'
+            ? 'Semua langkah tindakan selesai. Permohonan sedia untuk dihantar ke Ibu Pejabat dari senarai status.'
             : 'Draf disimpan. Sila teruskan langkah seterusnya.';
 
         if ($request->wantsJson()) {
@@ -131,7 +131,7 @@ class AdminProceedController extends Controller
         }
 
         if (! $contract->isPendingProceed()) {
-            abort(403, 'Tindakan hanya tersedia untuk permohonan yang belum dihantar kepada HQ.');
+            abort(403, 'Tindakan hanya tersedia untuk permohonan yang belum dihantar kepada Ibu Pejabat.');
         }
     }
 }

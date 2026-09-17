@@ -11,7 +11,7 @@
 @section('header_subtitle', $isAdminHq ? 'Semak dan sahkan permohonan yang dihantar oleh pentadbir negeri' : 'Pantau status permohonan dan lengkapkan tindakan')
 
 @section('content')
-<div class="space-y-4" id="status-permohonan-page" data-status-url="{{ route('status-permohonan.index') }}" data-current-tab="{{ $tab }}">
+<div class="space-y-4" id="status-permohonan-page" data-status-url="{{ route('status-permohonan.index') }}" data-sync-url="{{ route('status-permohonan.sync') }}" data-current-tab="{{ $tab }}">
     @if($isAdminHq)
         <div class="glass-tabs">
             <button
@@ -76,10 +76,32 @@
     const searchInput = document.getElementById('status-permohonan-search');
     const loading = document.getElementById('status-permohonan-search-loading');
     const baseUrl = page.dataset.statusUrl;
+    const syncUrl = page.dataset.syncUrl;
     let currentTab = page.dataset.currentTab || 'active';
+    let currentPage = Number(new URL(window.location.href).searchParams.get('page') || 1);
 
     let debounceTimer = null;
     let controller = null;
+    const pollIntervalMs = 15000;
+    const listInteraction = window.EsewaanListInteraction;
+
+    function buildSyncParams() {
+        const params = new URLSearchParams();
+        if (searchInput?.value.trim()) params.set('search', searchInput.value.trim());
+        if (currentTab === 'history') params.set('tab', 'history');
+
+        return params;
+    }
+
+    const hoverGuard = listInteraction.attachHoverGuard(list, () => {
+        fetchList(currentPage, { silent: true });
+    });
+
+    let listPoller = null;
+
+    function scrollContainer() {
+        return document.querySelector('main.flex-1.overflow-y-auto');
+    }
 
     function setLoading(isLoading) {
         if (!loading) return;
@@ -99,22 +121,33 @@
         }
     }
 
-    function fetchList(pageNumber) {
+    function fetchList(pageNumber, options = {}) {
+        const silent = options.silent === true;
+
+        if (pageNumber) {
+            currentPage = Number(pageNumber);
+        }
+
         if (controller) controller.abort();
         controller = new AbortController();
 
         const params = new URLSearchParams();
         params.set('partial', '1');
         if (searchInput?.value.trim()) params.set('search', searchInput.value.trim());
-        if (pageNumber) params.set('page', pageNumber);
+        if (currentPage > 1) params.set('page', String(currentPage));
         if (currentTab === 'history') params.set('tab', 'history');
 
-        setLoading(true);
+        if (! silent) {
+            setLoading(true);
+        }
+
+        const preservedScrollTop = silent ? scrollContainer()?.scrollTop ?? null : null;
 
         fetch(`${baseUrl}?${params.toString()}`, {
             headers: {
                 'X-Requested-With': 'XMLHttpRequest',
                 'Accept': 'text/html',
+                ...(silent ? { 'X-Background-Request': '1' } : {}),
             },
             signal: controller.signal,
         })
@@ -125,12 +158,32 @@
             .then((html) => {
                 list.innerHTML = html;
                 bindListEvents();
-                window.history.replaceState({}, '', `${baseUrl}?${params.toString()}`);
+
+                if (! silent) {
+                    window.history.replaceState({}, '', `${baseUrl}?${params.toString()}`);
+                }
+
+                if (preservedScrollTop !== null) {
+                    const container = scrollContainer();
+                    if (container) {
+                        container.scrollTop = preservedScrollTop;
+                    }
+                }
             })
             .catch((error) => {
                 if (error.name !== 'AbortError') console.error(error);
             })
-            .finally(() => setLoading(false));
+            .finally(() => {
+                if (! silent) {
+                    setLoading(false);
+                }
+
+                pollListState();
+            });
+    }
+
+    function pollListState() {
+        listPoller?.poll();
     }
 
     function bindListEvents() {
@@ -315,6 +368,17 @@
 
     updateTabButtons();
     bindListEvents();
+
+    listPoller = listInteraction.createFingerprintPoller({
+        syncUrl,
+        buildParams: buildSyncParams,
+        onFingerprintChange: () => fetchList(currentPage, { silent: true }),
+        intervalMs: pollIntervalMs,
+        shouldPoll: () => ! modal || modal.classList.contains('hidden'),
+        deferRefresh: (refreshFn) => hoverGuard.deferRefresh(refreshFn),
+    });
+
+    listPoller.start();
 })();
 </script>
 @endpush

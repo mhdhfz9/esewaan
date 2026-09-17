@@ -18,6 +18,7 @@ function validApplicationPayload(string $negeri = 'Johor', string $kategori = 'b
         'jenis_bangunan' => 'kompleks kerajaan',
         'kadar_sewa' => '1500.00',
         'keluasan_mp' => '120.50',
+        'tarikh_mula_tawaran' => now()->format('Y-m-d'),
         'sah_sehingga' => now()->addYear()->format('Y-m-d'),
     ];
 }
@@ -53,33 +54,38 @@ test('admin negeri can submit permohonan baru and is redirected to tindakan page
         ->and($contract->usesPlaceholderContractDates())->toBeTrue()
         ->and($contract->kategori_permohonan)->toBe('baru')
         ->and((float) $contract->keluasan_mp)->toBe(120.5)
+        ->and($contract->tarikh_mula_tawaran?->format('Y-m-d'))->toBe(now()->format('Y-m-d'))
         ->and($contract->premise?->nama_ptj)->toBe('Premis Ujian');
 
     expect(Premise::query()->count())->toBe(1);
 });
 
-test('permohonan baru form locks kategori to baru and shows keluasan field', function () {
+test('permohonan baru form allows selecting kategori', function () {
     $admin = User::factory()->create(['role' => 'admin_negeri', 'negeri' => 'Selangor']);
 
     $this->actingAs($admin)
         ->get(route('application.form'))
         ->assertSuccessful()
-        ->assertSee('Permohonan baharu.')
+        ->assertSee('— Pilih kategori —', false)
+        ->assertSee('name="kategori_permohonan"', false)
         ->assertSee('name="keluasan_mp"', false)
         ->assertSee('id="keluasan_kps"', false)
         ->assertSee('Nama Premis')
-        ->assertDontSee('— Pilih kategori —');
+        ->assertSee('>Baru</option>', false)
+        ->assertSee('>Pindah</option>', false)
+        ->assertSee('>Lanjutan</option>', false);
 });
 
-test('permohonan baru store always forces kategori baru', function () {
+test('admin negeri can submit permohonan with selected kategori', function () {
     $admin = User::factory()->create(['role' => 'admin_negeri', 'negeri' => 'Selangor']);
     $payload = validApplicationPayload('Selangor', 'pindah');
 
     $this->actingAs($admin)
         ->post(route('application.store'), $payload)
-        ->assertRedirect();
+        ->assertRedirect(route('admin-proceed.show', RentalContract::query()->first()))
+        ->assertSessionHas('success');
 
-    expect(RentalContract::query()->first()?->kategori_permohonan)->toBe('baru');
+    expect(RentalContract::query()->first()?->kategori_permohonan)->toBe('pindah');
 });
 
 test('admin negeri can submit permohonan baru only for their own negeri', function () {

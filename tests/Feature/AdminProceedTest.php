@@ -40,6 +40,8 @@ function proceedStepSavePayload(RentalContract $contract, int $step, ?string $no
         'confirmed_accurate' => '1',
         'confirmed_promis' => '1',
         'notes' => $notes,
+        'no_rujukan' => 'AADK/BKP/PB 200-3/02',
+        'tarikh_surat' => '2026-01-15',
     ];
 
     if ($key === AdminProceedSteps::STEP_SURAT_AGENSI) {
@@ -68,8 +70,80 @@ test('admin negeri can view dedicated tindakan page', function () {
         ->assertSuccessful()
         ->assertSee('Langkah Tindakan')
         ->assertSee('Surat niat kepada pemilik premis')
+        ->assertSee('No. Rujukan')
+        ->assertSee('Tarikh Surat')
+        ->assertSee('proceed_no_rujukan_surat_niat', false)
+        ->assertDontSee('proceed_no_rujukan_borang_jrp', false)
+        ->assertDontSee('proceed_no_rujukan_surat_jpph', false)
+        ->assertDontSee('proceed_no_rujukan_surat_agensi', false)
+        ->assertSee('Saya mengesahkan surat niat telah dihantar ke premis')
+        ->assertSee('Saya mengesahkan borang JRP telah diisi dan dimuat naik ke PROMIS')
+        ->assertDontSee('name="proceed_steps[borang_jrp][completed]"', false)
+        ->assertSee('Surat tawaran pemilik premis telah diterima dan dimuat naik ke PROMIS')
         ->assertSee('Catatan', false)
-        ->assertDontSee('Notis kepada pemilik premis');
+        ->assertSee('Surat kepada agensi')
+        ->assertSee('Surat JPPH')
+        ->assertDontSee('Surat kepada JPPH')
+        ->assertDontSee('Keluarkan surat kepada agensi berikut dengan dikepilkan Borang JRP')
+        ->assertSee('Langkah 3 / 3', false);
+});
+
+test('later tindakan steps can complete without no rujukan and tarikh surat', function () {
+    $admin = User::factory()->create(['role' => 'admin_negeri', 'negeri' => 'Johor']);
+    $contract = createPendingProceedContract('Johor');
+
+    $this->actingAs($admin)
+        ->put(route('admin-proceed.update', $contract), proceedStepSavePayload($contract, 2))
+        ->assertRedirect();
+
+    expect(AdminProceedSteps::isStepCompleted($contract->fresh(), 2))->toBeTrue();
+
+    $this->actingAs($admin)
+        ->put(route('admin-proceed.update', $contract), [
+            'current_step' => 3,
+            'proceed_steps' => [
+                AdminProceedSteps::STEP_BORANG_JRP => [
+                    'confirmed_accurate' => '1',
+                    'confirmed_promis' => '1',
+                    'notes' => 'Tanpa rujukan pada langkah 2',
+                ],
+            ],
+        ])
+        ->assertRedirect();
+
+    expect(AdminProceedSteps::isStepCompleted($contract->fresh(), 3))->toBeTrue();
+});
+
+test('surat niat step requires no rujukan and tarikh surat before completion', function () {
+    $admin = User::factory()->create(['role' => 'admin_negeri', 'negeri' => 'Johor']);
+    $contract = createPendingProceedContract('Johor');
+    $key = AdminProceedSteps::STEP_SURAT_NIAT;
+
+    $this->actingAs($admin)
+        ->put(route('admin-proceed.update', $contract), [
+            'current_step' => 2,
+            'proceed_steps' => [
+                $key => [
+                    'completed' => '1',
+                    'confirmed_accurate' => '1',
+                    'confirmed_promis' => '1',
+                    'notes' => 'Tanpa rujukan',
+                ],
+            ],
+        ])
+        ->assertRedirect();
+
+    expect(AdminProceedSteps::isStepCompleted($contract->fresh(), 2))->toBeFalse();
+
+    $this->actingAs($admin)
+        ->put(route('admin-proceed.update', $contract), proceedStepSavePayload($contract, 2))
+        ->assertRedirect();
+
+    $contract->refresh();
+
+    expect(AdminProceedSteps::isStepCompleted($contract, 2))->toBeTrue()
+        ->and($contract->no_fail_rujukan)->toBe('AADK/BKP/PB 200-3/02')
+        ->and($contract->tarikh_surat_niat?->format('Y-m-d'))->toBe('2026-01-15');
 });
 
 test('application edit page highlights required fields validation helpers', function () {
@@ -80,9 +154,11 @@ test('application edit page highlights required fields validation helpers', func
         ->get(route('application.edit', $contract))
         ->assertSuccessful()
         ->assertSee('ApplicationFormValidation', false)
-        ->assertSee('glass-input-required-empty', false)
         ->assertSee('glass-input-required-error', false)
-        ->assertSee('form-showing-required-errors', false);
+        ->assertSee('form-showing-required-errors', false)
+        ->assertSee('Sila lengkapkan semua ruangan yang wajib diisi.', false)
+        ->assertSee('redirectToFirstIncompleteRequiredStep', false)
+        ->assertSee('proceed-required-error', false);
 });
 
 test('admin negeri edit page shows combined form and tindakan stepper', function () {
@@ -117,9 +193,9 @@ test('hantar ke hq button appears on edit page only when proceed steps are compl
     $this->actingAs($admin)
         ->get(route('application.edit', $contract))
         ->assertSuccessful()
-        ->assertSee('Hantar ke Admin')
+        ->assertSee('Hantar ke Ibu Pejabat')
         ->assertSee('Seterusnya')
-        ->assertSee('Hantar Permohonan ke Admin', false)
+        ->assertSee('Hantar Permohonan ke Ibu Pejabat', false)
         ->assertSee('id="submit-hq-form"', false)
         ->assertSee('data-confirm-form="submit-hq-form"', false)
         ->assertSee('id="submit-hq-wrap" class="contents"', false);
@@ -159,7 +235,7 @@ test('surat agensi step shows agency checklist and requires all agencies before 
     $admin = User::factory()->create(['role' => 'admin_negeri', 'negeri' => 'Johor']);
     $contract = createPendingProceedContract('Johor', ApplicationCategories::BARU);
 
-    foreach ([2, 3, 4] as $step) {
+    foreach ([2, 3] as $step) {
         $this->actingAs($admin)->put(route('admin-proceed.update', $contract), proceedStepSavePayload($contract, $step));
         $contract->refresh();
     }
@@ -167,7 +243,8 @@ test('surat agensi step shows agency checklist and requires all agencies before 
     $this->actingAs($admin)
         ->get(route('admin-proceed.show', ['contract' => $contract, 'step' => 5]))
         ->assertSuccessful()
-        ->assertSee('Keluarkan surat kepada agensi berikut dengan dikepilkan Borang JRP', false)
+        ->assertSee('Surat JPPH', false)
+        ->assertDontSee('Keluarkan surat kepada agensi berikut dengan dikepilkan Borang JRP', false)
         ->assertSee('Ketua Pegawai Keselamatan Kerajaan Malaysia', false)
         ->assertSee('Gambar Bangunan Terkini', false);
 
@@ -196,7 +273,7 @@ test('surat agensi step requires dates for agency letters except pelan and gamba
     $admin = User::factory()->create(['role' => 'admin_negeri', 'negeri' => 'Johor']);
     $contract = createPendingProceedContract('Johor', ApplicationCategories::BARU);
 
-    foreach ([2, 3, 4] as $step) {
+    foreach ([2, 3] as $step) {
         $this->actingAs($admin)->put(route('admin-proceed.update', $contract), proceedStepSavePayload($contract, $step));
         $contract->refresh();
     }
@@ -278,7 +355,7 @@ test('admin negeri can complete tindakan steps one by one and notes are persiste
     expect(AdminProceedSteps::allCompleted($contract))->toBeTrue()
         ->and($contract->workflow_tahap)->toBe(RentalContract::WORKFLOW_MENUNGGU_PROCEED_NEGERI)
         ->and($contract->isReadyToSendToHq())->toBeTrue()
-        ->and($contract->workflowLabel())->toBe('Permohonan sedia untuk dihantar ke HQ');
+        ->and($contract->workflowLabel())->toBe('Permohonan sedia untuk dihantar ke Ibu Pejabat');
 });
 
 test('autosave draft persists form text fields immediately', function () {
@@ -365,17 +442,17 @@ test('autosave draft for one step does not reset other completed steps', functio
     $admin = User::factory()->create(['role' => 'admin_negeri', 'negeri' => 'Johor']);
     $contract = createPendingProceedContract('Johor');
     $stepTwoKey = AdminProceedSteps::keyForStep(2);
-    $stepFourKey = AdminProceedSteps::keyForStep(4);
+    $stepFiveKey = AdminProceedSteps::keyForStep(5);
 
     $this->actingAs($admin)
         ->put(route('admin-proceed.update', $contract), proceedStepSavePayload($contract, 2));
 
     $this->actingAs($admin)
-        ->put(route('admin-proceed.update', $contract), proceedStepSavePayload($contract, 4));
+        ->put(route('admin-proceed.update', $contract), proceedStepSavePayload($contract, 5));
 
     $contract->refresh();
     expect(AdminProceedSteps::isStepCompleted($contract, 2))->toBeTrue()
-        ->and(AdminProceedSteps::isStepCompleted($contract, 4))->toBeTrue();
+        ->and(AdminProceedSteps::isStepCompleted($contract, 5))->toBeTrue();
 
     $this->actingAs($admin)
         ->patchJson(route('application.autosave', $contract), [
@@ -393,23 +470,23 @@ test('autosave draft for one step does not reset other completed steps', functio
     $contract->refresh();
 
     expect(AdminProceedSteps::isStepCompleted($contract, 2))->toBeFalse()
-        ->and(AdminProceedSteps::isStepCompleted($contract, 4))->toBeTrue()
-        ->and($contract->proceedProgressPercent())->toBe(25);
+        ->and(AdminProceedSteps::isStepCompleted($contract, 5))->toBeTrue()
+        ->and($contract->proceedProgressPercent())->toBe(33);
 });
 
 test('autosave draft for one step does not reset marked_complete on other steps', function () {
     $admin = User::factory()->create(['role' => 'admin_negeri', 'negeri' => 'Johor']);
     $contract = createPendingProceedContract('Johor');
     $stepTwoKey = AdminProceedSteps::keyForStep(2);
-    $stepFourKey = AdminProceedSteps::keyForStep(4);
+    $stepFiveKey = AdminProceedSteps::keyForStep(5);
 
     $this->actingAs($admin)
-        ->put(route('admin-proceed.update', $contract), proceedStepSavePayload($contract, 4));
+        ->put(route('admin-proceed.update', $contract), proceedStepSavePayload($contract, 5));
 
     $contract->refresh();
     $progress = AdminProceedSteps::progressFor($contract);
 
-    expect($progress[$stepFourKey]['marked_complete'] ?? false)->toBeTrue();
+    expect($progress[$stepFiveKey]['marked_complete'] ?? false)->toBeTrue();
 
     $this->actingAs($admin)
         ->patchJson(route('application.autosave', $contract), [
@@ -423,14 +500,14 @@ test('autosave draft for one step does not reset marked_complete on other steps'
             ],
         ])
         ->assertSuccessful()
-        ->assertJsonPath('steps.'.$stepFourKey.'.marked_complete', true)
-        ->assertJsonPath('steps.'.$stepFourKey.'.completed', true);
+        ->assertJsonPath('steps.'.$stepFiveKey.'.marked_complete', true)
+        ->assertJsonPath('steps.'.$stepFiveKey.'.completed', true);
 
     $contract->refresh();
     $progress = AdminProceedSteps::progressFor($contract);
 
-    expect($progress[$stepFourKey]['marked_complete'] ?? false)->toBeTrue()
-        ->and($progress[$stepFourKey]['completed'] ?? false)->toBeTrue();
+    expect($progress[$stepFiveKey]['marked_complete'] ?? false)->toBeTrue()
+        ->and($progress[$stepFiveKey]['completed'] ?? false)->toBeTrue();
 });
 
 test('admin negeri can navigate to completed tindakan step via stepper', function () {
@@ -480,7 +557,7 @@ test('status permohonan shows hantar ke hq only when all tindakan steps are comp
         ->get(route('status-permohonan.index'))
         ->assertSuccessful()
         ->assertSee(route('application.edit', $pendingProceed, false))
-        ->assertSee('Hantar ke Admin', false)
+        ->assertSee('Hantar ke Ibu Pejabat', false)
         ->assertSee(route('status-permohonan.submit-hq', $readyToSend, false))
         ->assertDontSee(route('status-permohonan.submit-hq', $pendingProceed, false))
         ->assertDontSee(route('application.edit', $sentToHq, false));

@@ -54,7 +54,6 @@
 
                 @if($panel['has_agency_checklist'])
                     <div @class(['mb-4 rounded-xl border border-slate-300 bg-white/40 p-4' => ! $compact, 'mb-2 rounded-lg border border-slate-300 bg-white/40 p-2' => $compact])>
-                        <p @class(['mb-3 font-medium text-slate-900', 'text-sm' => ! $compact, 'text-xs' => $compact])>Keluarkan surat kepada agensi berikut dengan dikepilkan Borang JRP</p>
                         <div @class(['space-y-2' => ! $compact, 'space-y-1' => $compact])>
                             @foreach(\App\Support\AdminProceedSteps::agencyDefinitions() as $agencyKey => $agencyLabel)
                                 @php
@@ -88,6 +87,23 @@
                     </div>
                 @endif
 
+                @if($panel['requires_reference'] ?? false)
+                    <div @class(['mb-4 grid grid-cols-1 gap-3 sm:grid-cols-2' => ! $compact, 'mb-2 grid grid-cols-1 gap-2 sm:grid-cols-2' => $compact])>
+                        @include('partials.readonly-field', [
+                            'label' => 'No. Rujukan',
+                            'value' => $panel['no_rujukan'] ?? null,
+                            'empty' => 'Tiada no. rujukan direkodkan.',
+                        ])
+                        @include('partials.readonly-field', [
+                            'label' => 'Tarikh Surat',
+                            'value' => filled($panel['tarikh_surat'] ?? null)
+                                ? \Illuminate\Support\Carbon::parse($panel['tarikh_surat'])->format('d/m/Y')
+                                : null,
+                            'empty' => 'Tiada tarikh surat direkodkan.',
+                        ])
+                    </div>
+                @endif
+
                 <div @class(['border-t border-slate-200/60 pt-4' => ! $compact, 'border-t border-slate-200/60 pt-2' => $compact])>
                     <p class="mb-2 text-[11px] font-semibold uppercase tracking-wide text-slate-500">Pengesahan Pentadbir Negeri</p>
                     <div @class(['space-y-3' => ! $compact, 'space-y-1.5' => $compact])>
@@ -99,7 +115,15 @@
                                 class="mt-0.5 h-4 w-4 shrink-0 rounded border-slate-300 text-slate-800"
                             >
                             <span @class(['leading-relaxed text-slate-700', 'text-sm' => ! $compact, 'text-xs' => $compact])>
-                                <span class="font-medium text-slate-900">Saya mengesahkan maklumat ini tepat dan benar</span>
+                                <span class="font-medium text-slate-900">
+                                    @if(($panel['position'] ?? null) === 1)
+                                        Saya mengesahkan surat niat telah dihantar ke premis
+                                    @elseif(($panel['key'] ?? null) === \App\Support\AdminProceedSteps::STEP_BORANG_JRP)
+                                        Saya mengesahkan borang JRP telah diisi dan dimuat naik ke PROMIS
+                                    @else
+                                        Saya mengesahkan maklumat ini tepat dan benar
+                                    @endif
+                                </span>
                             </span>
                         </label>
 
@@ -111,10 +135,19 @@
                                 class="mt-0.5 h-4 w-4 shrink-0 rounded border-slate-300 text-slate-800"
                             >
                             <span @class(['leading-relaxed text-slate-700', 'text-sm' => ! $compact, 'text-xs' => $compact])>
-                                <span class="font-medium text-slate-900">Maklumat ini telah dimuat naik ke dalam sistem PROMIS.</span>
+                                <span class="font-medium text-slate-900">
+                                    @if(($panel['position'] ?? null) === 1)
+                                        Surat tawaran pemilik premis telah diterima dan dimuat naik ke PROMIS
+                                    @elseif(($panel['key'] ?? null) === \App\Support\AdminProceedSteps::STEP_BORANG_JRP)
+                                        Saya mengesahkan maklumat ini tepat dan benar
+                                    @else
+                                        Maklumat ini telah dimuat naik ke dalam sistem PROMIS.
+                                    @endif
+                                </span>
                             </span>
                         </label>
 
+                        @if(($panel['key'] ?? null) !== \App\Support\AdminProceedSteps::STEP_BORANG_JRP)
                         <label @class(['flex items-start gap-3.5 rounded-xl border border-slate-300 bg-white/40 px-4 py-3.5' => ! $compact, 'flex items-start gap-2 rounded-lg border border-slate-300 bg-white/40 px-2 py-1.5' => $compact])>
                             <input
                                 type="checkbox"
@@ -126,6 +159,7 @@
                                 <span class="font-medium text-slate-900">Saya mengesahkan langkah ini telah selesai dilaksanakan.</span>
                             </span>
                         </label>
+                        @endif
                     </div>
                 </div>
 

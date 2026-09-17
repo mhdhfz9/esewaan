@@ -2,11 +2,12 @@
 
 namespace App\Models;
 
-// use Illuminate\Contracts\Auth\MustVerifyEmail;
+use App\Mail\PasswordResetMail;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Facades\Mail;
 
 class User extends Authenticatable
 {
@@ -79,7 +80,7 @@ class User extends Authenticatable
     public function roleLabel(): string
     {
         return match ($this->role) {
-            'admin_hq' => 'Admin',
+            'admin_hq' => 'Ibu Pejabat',
             'admin_negeri' => 'Negeri',
             default => 'Tidak diketahui',
         };
@@ -142,5 +143,16 @@ class User extends Authenticatable
     public function activityLogs(): \Illuminate\Database\Eloquent\Relations\HasMany
     {
         return $this->hasMany(ActivityLog::class);
+    }
+
+    public function sendPasswordResetNotification($token): void
+    {
+        Mail::to($this->email)->send(new PasswordResetMail(
+            user: $this,
+            resetUrl: route('password.reset', [
+                'token' => $token,
+                'email' => $this->email,
+            ]),
+        ));
     }
 }

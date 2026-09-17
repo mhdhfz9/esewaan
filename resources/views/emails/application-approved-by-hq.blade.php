@@ -12,8 +12,8 @@
     </style>
 </head>
 <body>
-    <h2>Permohonan Disahkan oleh Admin</h2>
-    <p>Admin <strong>{{ $approvedBy->name }}</strong> telah mengesahkan permohonan sewaan berikut.</p>
+    <h2>Permohonan Disahkan oleh Ibu Pejabat</h2>
+    <p>Ibu Pejabat <strong>{{ $approvedBy->name }}</strong> telah mengesahkan permohonan sewaan berikut.</p>
 
     <table>
         <tr>
@@ -25,7 +25,7 @@
             <td>{{ $contract->premise?->negeri ?? '—' }}</td>
         </tr>
         <tr>
-            <th>Negeri</th>
+            <th>Nama Pemohon</th>
             <td>{{ $contract->displayAdminNegeriName() }}</td>
         </tr>
         <tr>
@@ -37,7 +37,7 @@
             <td>Penyediaan Draf Perjanjian</td>
         </tr>
         <tr>
-            <th>Tarikh Pengesahan HQ</th>
+            <th>Tarikh Pengesahan Ibu Pejabat</th>
             <td>{{ $contract->hq_approved_at?->format('d/m/Y H:i') ?? '—' }}</td>
         </tr>
     </table>

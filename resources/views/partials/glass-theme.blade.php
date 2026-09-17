@@ -36,12 +36,12 @@
     }
 
     .liquid-bg {
-        background-color: #f4f7fb;
+        background-color: #e8eef5;
         background-image:
             radial-gradient(ellipse 95% 70% at 0% 0%, rgba(30, 58, 95, 0.08) 0%, transparent 55%),
             radial-gradient(ellipse 80% 60% at 100% 0%, rgba(42, 74, 115, 0.07) 0%, transparent 52%),
             radial-gradient(ellipse 70% 55% at 50% 100%, rgba(226, 232, 240, 0.85) 0%, transparent 60%),
-            linear-gradient(165deg, #ffffff 0%, #f8fafc 36%, #eef3f8 70%, #e4ebf3 100%);
+            linear-gradient(165deg, #f1f5f9 0%, #e8eef5 36%, #dde5ef 70%, #d0dae6 100%);
         position: relative;
         isolation: isolate;
         min-height: 100vh;
@@ -264,20 +264,26 @@
         outline: none;
     }
 
-    /* Blue = medan wajib yang masih kosong (:required:invalid). Catatan pilihan tidak kena. */
-    .glass-input.glass-input-required-empty,
-    .liquid-bg input.glass-input-required-empty,
-    .liquid-bg select.glass-input-required-empty,
-    .liquid-bg textarea.glass-input-required-empty,
-    #form-sewaan .glass-input:required:not(:disabled):not([readonly]):invalid:not(.glass-input-required-error),
-    #form-tindakan .glass-input:required:not(:disabled):not([readonly]):invalid:not(.glass-input-required-error) {
-        border-color: rgba(59, 130, 246, 0.85) !important;
-        box-shadow:
-            0 0 0 1px rgba(255, 255, 255, 0.95),
-            0 0 0 3px rgba(59, 130, 246, 0.18),
-            inset 0 1px 2px rgba(15, 39, 68, 0.03) !important;
+    /* Satu ikon mata sahaja — sembunyikan butang papar kata laluan bawaan pelayar (Edge/Chrome). */
+    .auth-password-input::-ms-reveal,
+    .auth-password-input::-ms-clear {
+        display: none;
     }
 
+    .auth-password-input::-webkit-credentials-auto-fill-button {
+        visibility: hidden;
+        pointer-events: none;
+        position: absolute;
+        right: 0;
+    }
+
+    .auth-password-input::-webkit-password-reveal-button {
+        -webkit-appearance: none;
+        appearance: none;
+        display: none;
+    }
+
+    /* Red = medan wajib kosong selepas user cuba teruskan/hantar. Tiada highlight biru proaktif. */
     .glass-input.glass-input-required-error,
     .liquid-bg input.glass-input-required-error,
     .liquid-bg select.glass-input-required-error,
@@ -291,17 +297,12 @@
             inset 0 1px 2px rgba(15, 39, 68, 0.03) !important;
     }
 
-    .glass-input.glass-input-required-empty:focus,
-    .liquid-bg input.glass-input-required-empty:focus,
-    .liquid-bg select.glass-input-required-empty:focus,
-    .liquid-bg textarea.glass-input-required-empty:focus,
-    #form-sewaan .glass-input:required:not(:disabled):not([readonly]):invalid:not(.glass-input-required-error):focus,
-    #form-tindakan .glass-input:required:not(:disabled):not([readonly]):invalid:not(.glass-input-required-error):focus {
-        border-color: rgba(37, 99, 235, 0.95) !important;
+    .proceed-step-checkbox-label.proceed-required-error,
+    .proceed-agency-checklist.proceed-required-error {
+        border-color: rgba(239, 68, 68, 0.9) !important;
         box-shadow:
-            0 0 0 1px rgba(255, 255, 255, 1),
-            0 0 0 3px rgba(59, 130, 246, 0.28),
-            inset 0 1px 2px rgba(15, 39, 68, 0.03) !important;
+            0 0 0 1px rgba(255, 255, 255, 0.95),
+            0 0 0 3px rgba(239, 68, 68, 0.18) !important;
     }
 
     .glass-input.glass-input-required-error:focus,
@@ -514,6 +515,7 @@
     .glass-table {
         background: rgba(255, 255, 255, 0.58);
         backdrop-filter: blur(24px) saturate(180%);
+        -webkit-backdrop-filter: blur(24px) saturate(180%);
         border: 1px solid rgba(255, 255, 255, 0.7);
         box-shadow: 0 4px 24px rgba(15, 39, 68, 0.05);
     }
@@ -521,6 +523,40 @@
     .glass-table thead {
         background: rgba(248, 250, 252, 0.65);
         backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+    }
+
+    /*
+     * Glass tables & list rows — anti-flicker standard.
+     * Nested blur + animated semi-transparent row hovers repaint badly in Chrome/Edge.
+     */
+    .glass-card.glass-table {
+        backdrop-filter: none;
+        -webkit-backdrop-filter: none;
+    }
+
+    .glass-card.glass-table thead {
+        backdrop-filter: none;
+        -webkit-backdrop-filter: none;
+        background: rgba(248, 250, 252, 0.98);
+    }
+
+    .glass-card.glass-table tbody,
+    .glass-card.glass-table > .glass-row-hover,
+    .glass-card > .divide-y {
+        background: rgba(255, 255, 255, 0.96);
+    }
+
+    .glass-card.glass-table tbody tr,
+    .glass-card.glass-table > .glass-row-hover,
+    .glass-card .glass-row-hover,
+    .glass-row-neutral,
+    .glass-row-pending,
+    .glass-row-ready-hq,
+    .glass-row-hq-review,
+    .glass-row-withdrawal-pending,
+    .glass-row-hover {
+        transition: none;
     }
 
     .glass-divider-soft {
@@ -529,7 +565,6 @@
 
     .glass-row-neutral {
         background: transparent;
-        transition: background 0.2s ease;
     }
 
     .glass-row-neutral:hover {
@@ -538,7 +573,6 @@
 
     .glass-row-pending {
         background: rgba(255, 251, 235, 0.72);
-        transition: background 0.2s ease;
     }
 
     .glass-row-pending:hover {
@@ -547,7 +581,6 @@
 
     .glass-row-ready-hq {
         background: rgba(236, 253, 245, 0.72);
-        transition: background 0.2s ease;
     }
 
     .glass-row-ready-hq:hover {
@@ -556,7 +589,6 @@
 
     .glass-row-hq-review {
         background: rgba(241, 245, 249, 0.82);
-        transition: background 0.2s ease;
     }
 
     .glass-row-hq-review:hover {
@@ -565,7 +597,6 @@
 
     .glass-row-withdrawal-pending {
         background: rgba(255, 251, 235, 0.78);
-        transition: background 0.2s ease;
     }
 
     .glass-row-withdrawal-pending:hover {
@@ -624,6 +655,33 @@
         border-color: rgba(255, 255, 255, 0.12);
         color: #ffffff;
         font-weight: 500;
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1);
+    }
+
+    .sidebar-appearance-btn {
+        display: inline-flex;
+        flex-shrink: 0;
+        align-items: center;
+        justify-content: center;
+        width: 2.5rem;
+        height: 2.5rem;
+        border-radius: 0.75rem;
+        color: rgba(255, 255, 255, 0.65);
+        border: 1px solid transparent;
+        transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .sidebar-appearance-btn:hover {
+        background: rgba(255, 255, 255, 0.12);
+        border-color: rgba(255, 255, 255, 0.1);
+        color: #ffffff;
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+    }
+
+    .sidebar-appearance-btn.is-active {
+        background: rgba(255, 255, 255, 0.14);
+        border-color: rgba(255, 255, 255, 0.12);
+        color: #ffffff;
         box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1);
     }
 
@@ -705,6 +763,49 @@
     .sidebar-logout-btn:hover {
         background: rgba(255, 255, 255, 0.12);
         border-color: rgba(255, 255, 255, 0.2);
+    }
+
+    .sidebar-profile-footer {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+    }
+
+    .sidebar-profile-card {
+        display: flex;
+        width: 100%;
+        flex-direction: column;
+        align-items: center;
+        border-radius: 0.75rem;
+        padding: 0.5rem 0.75rem;
+        color: rgba(255, 255, 255, 0.65);
+        border: 1px solid transparent;
+        transition: background 320ms cubic-bezier(0.22, 1, 0.36, 1), color 320ms ease, border-color 320ms ease;
+    }
+
+    .sidebar-profile-card:hover {
+        background: rgba(255, 255, 255, 0.12);
+        border-color: rgba(255, 255, 255, 0.1);
+        color: #ffffff;
+    }
+
+    .sidebar-profile-card.is-active {
+        background: rgba(255, 255, 255, 0.14);
+        border-color: rgba(255, 255, 255, 0.12);
+        color: #ffffff;
+    }
+
+    .sidebar-profile-card .sidebar-profile-email {
+        max-width: 100%;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .sidebar-profile-footer form {
+        width: 100%;
+        padding-top: 0.5rem;
     }
 
     .glass-progress-fill-amber {

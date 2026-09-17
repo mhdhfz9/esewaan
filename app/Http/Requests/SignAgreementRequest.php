@@ -34,7 +34,7 @@ class SignAgreementRequest extends FormRequest
      */
     public function messages(): array
     {
-        $message = 'Sila tanda kesemua kotak pengesahan sebelum menekan Selesai.';
+        $message = 'Sila tanda kesemua kotak pengesahan sebelum menghantar kepada Negeri.';
 
         return [
             'terima_dokumen_acknowledged.accepted' => $message,

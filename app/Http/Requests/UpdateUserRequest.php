@@ -115,7 +115,7 @@ class UpdateUserRequest extends FormRequest
                     ->exists();
 
                 if (! $remainingAdmins) {
-                    $validator->errors()->add('role', 'Sekurang-kurangnya satu Admin mesti kekal dalam sistem.');
+                    $validator->errors()->add('role', 'Sekurang-kurangnya satu Ibu Pejabat mesti kekal dalam sistem.');
                 }
             }
         });

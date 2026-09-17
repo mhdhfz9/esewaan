@@ -93,8 +93,9 @@ class RentalContractListSearch
     {
         return [
             RentalContract::WORKFLOW_MENUNGGU_PROCEED_NEGERI => 'Menunggu langkah tindakan',
-            RentalContract::WORKFLOW_MENUNGGU_SEMAKAN_HQ => 'Menunggu semakan HQ',
+            RentalContract::WORKFLOW_MENUNGGU_SEMAKAN_HQ => 'Menunggu semakan Ibu Pejabat',
             RentalContract::WORKFLOW_MENUNGGU_SEMAKAN_NEGERI => 'Menunggu semakan pentadbir negeri',
+            RentalContract::WORKFLOW_MATI_SETEM => 'Menunggu Mati Setem',
         ];
     }
 }

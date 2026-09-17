@@ -36,6 +36,7 @@
         : '';
 
     $sahSehinggaValue = old('sah_sehingga', $contract?->sah_sehingga?->format('Y-m-d') ?? '');
+    $tarikhMulaTawaranValue = old('tarikh_mula_tawaran', $contract?->tarikh_mula_tawaran?->format('Y-m-d') ?? '');
 @endphp
 
 @section('title', $isFollowUp ? 'Permohonan '.\App\Support\ApplicationCategories::label($contract->kategori_permohonan) : ($isEdit ? 'Kemaskini Permohonan' : 'Permohonan Baru'))
@@ -73,7 +74,8 @@
                     <div class="pointer-events-none grid grid-cols-1 gap-3 md:grid-cols-3 [&_p]:text-slate-500 [&_.glass-field-static]:border-slate-300/80 [&_.glass-field-static]:bg-slate-100 [&_.glass-field-static]:text-slate-800 [&_.glass-field-static]:shadow-none">
                         @include('partials.readonly-field', ['label' => 'Nama Premis Lama', 'value' => $parentPremise?->nama_ptj])
                         @include('partials.readonly-field', ['label' => 'Kadar Sewa Lama (RM)', 'value' => $parentRent !== null ? number_format((float) $parentRent, 2) : null])
-                        @include('partials.readonly-field', ['label' => 'Sah Sehingga Lama', 'value' => $parent?->sah_sehingga?->format('d/m/Y')])
+                        @include('partials.readonly-field', ['label' => 'Tarikh Mula Lama', 'value' => $parent?->tarikh_mula_tawaran?->format('d/m/Y')])
+                        @include('partials.readonly-field', ['label' => 'Tarikh Akhir Tempoh Tawaran Penyewaan Lama', 'value' => $parent?->sah_sehingga?->format('d/m/Y')])
                         @include('partials.readonly-field', ['label' => 'Jenis Bangunan Lama', 'value' => \App\Support\BuildingTypes::all()[$parentPremise?->jenis_bangunan] ?? $parentPremise?->jenis_bangunan])
                         @include('partials.readonly-field', ['label' => 'Pemilik Lama', 'value' => $parentPremise?->nama_pemilik])
                         @include('partials.readonly-field', ['label' => 'Alamat Lama', 'value' => $parentPremise?->alamat_penuh, 'wrapperClass' => 'md:col-span-3', 'multiline' => true])
@@ -100,42 +102,62 @@
                             <span>Kategori Permohonan *</span>
                             @include('partials.form-field-hint', ['text' => $isEdit
                                 ? 'Kategori dikunci selepas permohonan dicipta.'
-                                : 'Permohonan baharu dikunci kepada kategori Baru. Pindah dan lanjutan dibuat dari senarai kontrak sewaan.'])
+                                : 'Pindah dan Lanjutan boleh dibuat pada senarai kontrak sewaan yang telah wujud.'])
                         </label>
                         @php
-                            $lockedKategori = $isEdit
-                                ? $contract->kategori_permohonan
-                                : \App\Support\ApplicationCategories::BARU;
+                            $selectedKategori = old(
+                                'kategori_permohonan',
+                                $isEdit ? $contract->kategori_permohonan : \App\Support\ApplicationCategories::BARU
+                            );
                         @endphp
-                        <select
-                            id="kategori_permohonan"
-                            required
-                            disabled
-                            class="glass-input w-full cursor-not-allowed rounded-xl px-3 py-2 text-sm opacity-70"
-                        >
-                            <option value="{{ $lockedKategori }}" selected>
-                                {{ \App\Support\ApplicationCategories::label($lockedKategori) }}
-                            </option>
-                        </select>
-                        <input type="hidden" name="kategori_permohonan" value="{{ $lockedKategori }}">
-                        <p class="mt-1.5 text-xs glass-accent-text">
-                            {{ $isEdit
-                                ? 'Kategori permohonan dikunci selepas permohonan dicipta.'
-                                : 'Permohonan baharu.' }}
-                        </p>
+                        @if($isEdit)
+                            <select
+                                id="kategori_permohonan"
+                                required
+                                disabled
+                                class="glass-input w-full cursor-not-allowed rounded-xl px-3 py-2 text-sm opacity-70"
+                            >
+                                <option value="{{ $selectedKategori }}" selected>
+                                    {{ \App\Support\ApplicationCategories::label($selectedKategori) }}
+                                </option>
+                            </select>
+                            <input type="hidden" name="kategori_permohonan" value="{{ $selectedKategori }}">
+                            <p class="mt-1.5 text-xs glass-accent-text">
+                                Kategori permohonan dikunci selepas permohonan dicipta.
+                            </p>
+                        @else
+                            <select
+                                name="kategori_permohonan"
+                                id="kategori_permohonan"
+                                required
+                                class="glass-input w-full rounded-xl px-3 py-2 text-sm"
+                                data-kategori-select
+                            >
+                                <option value="">— Pilih kategori —</option>
+                                @foreach(\App\Support\ApplicationCategories::labels() as $value => $label)
+                                    <option
+                                        value="{{ $value }}"
+                                        data-description="{{ \App\Support\ApplicationCategories::description($value) }}"
+                                        @selected($selectedKategori === $value)
+                                    >{{ $label }}</option>
+                                @endforeach
+                            </select>
+                            <p id="kategori-permohonan-hint" class="mt-1.5 text-xs glass-accent-text">
+                                {{ \App\Support\ApplicationCategories::description($selectedKategori) }}
+                            </p>
+                        @endif
                         @error('kategori_permohonan')<p class="mt-1 text-xs text-red-500">{{ $message }}</p>@enderror
                     </div>
 
                     <div>
                         <label for="negeri" class="mb-1.5 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-gray-600">
                             <span>Negeri *</span>
-                            @include('partials.form-field-hint', ['text' => 'Negeri lokasi premis yang dipohon. Dikunci mengikut negeri pentadbir anda.'])
+                            @include('partials.form-field-hint', ['text' => 'Negeri lokasi premis yang mengikut lokasi pengguna.'])
                         </label>
                         <select id="negeri" required disabled class="glass-input w-full cursor-not-allowed rounded-xl px-3 py-2 text-sm text-slate-600">
                             <option value="{{ $adminNegeri }}" selected>{{ $adminNegeri }}</option>
                         </select>
                         <input type="hidden" name="negeri" value="{{ old('negeri', $contract?->premise?->negeri ?? $adminNegeri) }}">
-                        <p class="mt-1.5 text-xs glass-accent-text">Negeri dikunci mengikut negeri pentadbir anda.</p>
                         @error('negeri')<p class="mt-1 text-xs text-red-500">{{ $message }}</p>@enderror
                     </div>
                 </div>
@@ -241,9 +263,24 @@
                             </div>
                         </div>
                         <div>
+                            <label for="tarikh_mula_tawaran" class="mb-1.5 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-gray-600">
+                                <span>Tarikh Mula {{ $isFollowUp ? 'Baharu ' : '' }}*</span>
+                                @include('partials.form-field-hint', ['text' => 'Tarikh mula tempoh tawaran penyewaan untuk premis ini.'])
+                            </label>
+                            <input
+                                type="date"
+                                name="tarikh_mula_tawaran"
+                                id="tarikh_mula_tawaran"
+                                value="{{ $tarikhMulaTawaranValue }}"
+                                required
+                                class="glass-input w-full rounded-xl px-3 py-2 text-sm"
+                            >
+                            @error('tarikh_mula_tawaran')<p class="mt-1 text-xs text-red-500">{{ $message }}</p>@enderror
+                        </div>
+                        <div>
                             <label for="sah_sehingga" class="mb-1.5 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-gray-600">
-                                <span>Sah Sehingga {{ $isFollowUp ? 'Baharu ' : '' }}*</span>
-                                @include('partials.form-field-hint', ['text' => 'Tarikh sah laku permohonan atau kelulusan berkaitan premis ini.'])
+                                <span>Tarikh Akhir Tempoh Tawaran Penyewaan {{ $isFollowUp ? 'Baharu ' : '' }}*</span>
+                                @include('partials.form-field-hint', ['text' => 'Tarikh akhir tempoh tawaran penyewaan untuk premis ini.'])
                             </label>
                             <input
                                 type="date"
@@ -297,7 +334,7 @@
                             <textarea name="remark" id="remark" rows="2" required placeholder="Masukkan remark..." class="glass-input w-full resize-none rounded-xl px-3 py-2 text-sm placeholder:text-slate-400">{{ old('remark', $contract?->remark) }}</textarea>
                             @error('remark')<p class="mt-1 text-xs text-red-500">{{ $message }}</p>@enderror
                             @if($contract->isAwaitingFollowUpRemark())
-                                <p class="mt-1.5 text-xs font-medium text-amber-700">Remark diperlukan sebelum permohonan boleh dihantar ke Admin.</p>
+                                <p class="mt-1.5 text-xs font-medium text-amber-700">Remark diperlukan sebelum permohonan boleh dihantar ke Ibu Pejabat.</p>
                             @endif
                         </div>
                     </div>
@@ -330,7 +367,7 @@
             <div class="flex flex-wrap items-center justify-end gap-3">
             @if($isEdit && isset($stepPanels))
                 @if($contract->isAwaitingFollowUpRemark())
-                    <p class="text-sm font-medium text-amber-700">Sila isi Remark sebelum menghantar ke Admin.</p>
+                    <p class="text-sm font-medium text-amber-700">Sila isi Remark sebelum menghantar ke Ibu Pejabat.</p>
                 @endif
 
                 <p id="form-save-status" class="mr-auto hidden text-xs text-slate-500" aria-live="polite"></p>
@@ -344,13 +381,13 @@
                         type="button"
                         id="submit-hq-button"
                         class="status-confirm-trigger glass-btn-primary rounded-xl px-5 py-2 text-sm font-medium"
-                        data-confirm-title="Hantar Permohonan ke Admin"
-                        data-confirm-message="Anda pasti mahu menghantar permohonan ini kepada Admin untuk semakan? Sila semak maklumat premis sebelum meneruskan."
+                        data-confirm-title="Hantar Permohonan ke Ibu Pejabat"
+                        data-confirm-message="Anda pasti mahu menghantar permohonan ini kepada Ibu Pejabat untuk semakan? Sila semak maklumat premis sebelum meneruskan."
                         data-confirm-form="submit-hq-form"
                         data-confirm-button="Ya, Hantar"
                         data-confirm-tone="success"
                     >
-                        Hantar ke Admin
+                        Hantar ke Ibu Pejabat
                     </button>
                 </div>
             @else
@@ -451,7 +488,7 @@
             if (!targetForm || !modal || !modalConfirm || !modalTitle || !modalMessage) return;
 
             if (trigger.id === 'submit-hq-button' && form && !window.ApplicationFormValidation?.validate(form)) {
-                showFormStatus('Sila lengkapkan semua medan bertanda biru/merah sebelum menghantar ke HQ.');
+                showFormStatus('Sila lengkapkan semua ruangan yang wajib diisi.');
                 return;
             }
 
@@ -498,6 +535,27 @@
 </script>
 @endpush
 @endif
+
+@unless($isEdit)
+<script>
+    (function () {
+        const select = document.querySelector('[data-kategori-select]');
+        const hint = document.getElementById('kategori-permohonan-hint');
+        if (!select || !hint) {
+            return;
+        }
+
+        const updateHint = () => {
+            const selected = select.options[select.selectedIndex];
+            hint.textContent = selected?.dataset?.description
+                || 'Sila pilih kategori permohonan.';
+        };
+
+        select.addEventListener('change', updateHint);
+        updateHint();
+    })();
+</script>
+@endunless
 
 @if($isFollowUp)
 <script>

@@ -16,6 +16,7 @@ function createListIndicatorContract(
     ?User $adminNegeri = null,
     ?\Carbon\Carbon $hqApprovedAt = null,
     ?\Carbon\Carbon $updatedAt = null,
+    ?\Carbon\Carbon $createdAt = null,
 ): RentalContract {
     $premise = Premise::query()->create([
         'nama_ptj' => $label,
@@ -37,14 +38,24 @@ function createListIndicatorContract(
         'hq_approved_at' => $hqApprovedAt,
     ]);
 
+    $timestamps = [];
+
+    if ($createdAt) {
+        $timestamps['created_at'] = $createdAt;
+    }
+
     if ($updatedAt) {
-        $contract->forceFill(['updated_at' => $updatedAt])->saveQuietly();
+        $timestamps['updated_at'] = $updatedAt;
+    }
+
+    if ($timestamps !== []) {
+        $contract->forceFill($timestamps)->saveQuietly();
     }
 
     return $contract->fresh(['adminNegeriUser', 'premise']);
 }
 
-test('status permohonan list marks unseen applications with orange edge and sorts them first', function () {
+test('status permohonan list marks unseen applications with orange edge and sorts by newest application date', function () {
     $admin = User::factory()->create(['role' => 'admin_hq']);
     $unseenAdmin = User::factory()->create(['role' => 'admin_negeri', 'negeri' => 'Johor', 'name' => 'Negeri Lama Belum Dibuka']);
     $seenAdmin = User::factory()->create(['role' => 'admin_negeri', 'negeri' => 'Johor', 'name' => 'Negeri Baru Sudah Dibuka']);
@@ -54,6 +65,7 @@ test('status permohonan list marks unseen applications with orange edge and sort
         RentalContract::WORKFLOW_MENUNGGU_SEMAKAN_HQ,
         'Premis Lama Belum Dibuka',
         $unseenAdmin,
+        createdAt: now()->subDay(),
         updatedAt: now()->subDay(),
     );
     $newerSeen = createListIndicatorContract(
@@ -61,6 +73,7 @@ test('status permohonan list marks unseen applications with orange edge and sort
         RentalContract::WORKFLOW_MENUNGGU_SEMAKAN_HQ,
         'Premis Baru Sudah Dibuka',
         $seenAdmin,
+        createdAt: now(),
         updatedAt: now(),
     );
 
@@ -79,33 +92,36 @@ test('status permohonan list marks unseen applications with orange edge and sort
         ->assertSee('Negeri Baru Sudah Dibuka')
         ->getContent();
 
-    expect(strpos($html, 'Negeri Lama Belum Dibuka'))->toBeLessThan(strpos($html, 'Negeri Baru Sudah Dibuka'))
+    expect(strpos($html, 'Negeri Baru Sudah Dibuka'))->toBeLessThan(strpos($html, 'Negeri Lama Belum Dibuka'))
         ->and($html)->toContain('glass-row-unseen')
         ->and($olderUnseen->isUnseenBy($admin))->toBeTrue()
         ->and($newerSeen->fresh()->isUnseenBy($admin))->toBeFalse();
 });
 
-test('kontrak sewaan list marks unseen contracts with orange edge and sorts by latest approval', function () {
+test('kontrak sewaan list marks unseen contracts with orange edge and sorts by shortest remaining period', function () {
     $admin = User::factory()->create(['role' => 'admin_negeri', 'negeri' => 'Johor']);
 
-    $olderUnseen = createListIndicatorContract(
+    $soonestUnseen = createListIndicatorContract(
         'Johor',
         RentalContract::WORKFLOW_MENUNGGU_SEMAKAN_NEGERI,
-        'Kontrak Lama Belum Dibuka',
+        'Kontrak Baki Pendek',
         $admin,
         hqApprovedAt: now()->subDays(2),
     );
-    $newerSeen = createListIndicatorContract(
+    $soonestUnseen->update(['sah_sehingga' => now()->addMonths(2)]);
+
+    $laterSeen = createListIndicatorContract(
         'Johor',
         RentalContract::WORKFLOW_MENUNGGU_SEMAKAN_NEGERI,
-        'Kontrak Baru Sudah Dibuka',
+        'Kontrak Baki Panjang',
         $admin,
         hqApprovedAt: now(),
     );
+    $laterSeen->update(['sah_sehingga' => now()->addMonths(18)]);
 
     RentalContractNotificationView::query()->create([
         'user_id' => $admin->id,
-        'rental_contract_id' => $newerSeen->id,
+        'rental_contract_id' => $laterSeen->id,
         'viewed_at' => now(),
     ]);
 
@@ -114,11 +130,12 @@ test('kontrak sewaan list marks unseen contracts with orange edge and sorts by l
         ->assertSuccessful()
         ->assertDontSee('Belum dibuka / baru masuk')
         ->assertDontSee('>Baru</span>', false)
-        ->assertSee('Kontrak Lama Belum Dibuka')
-        ->assertSee('Kontrak Baru Sudah Dibuka')
+        ->assertSee('Kontrak Baki Pendek')
+        ->assertSee('Kontrak Baki Panjang')
+        ->assertSee('bg-red-100 text-red-700', false)
         ->getContent();
 
-    expect(strpos($html, 'Kontrak Lama Belum Dibuka'))->toBeLessThan(strpos($html, 'Kontrak Baru Sudah Dibuka'))
+    expect(strpos($html, 'Kontrak Baki Pendek'))->toBeLessThan(strpos($html, 'Kontrak Baki Panjang'))
         ->and($html)->toContain('glass-row-unseen')
-        ->and($olderUnseen->isUnseenBy($admin))->toBeTrue();
+        ->and($soonestUnseen->isUnseenBy($admin))->toBeTrue();
 });

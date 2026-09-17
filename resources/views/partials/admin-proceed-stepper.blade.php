@@ -22,7 +22,7 @@
         </div>
         @if($isReadyForHq)
             <p id="proceed-ready-status" class="mt-2 text-xs font-medium text-emerald-700">
-                Permohonan sedia untuk dihantar ke HQ
+                Permohonan sedia untuk dihantar ke Ibu Pejabat
             </p>
         @else
             <p id="proceed-ready-status" class="mt-2 hidden text-xs font-medium text-emerald-700"></p>
