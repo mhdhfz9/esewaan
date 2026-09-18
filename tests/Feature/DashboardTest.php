@@ -56,6 +56,7 @@ test('dashboard shows accurate counts based on current workflow data', function 
     createDashboardContract(RentalContract::WORKFLOW_PENYEDIAAN_DRAF_PERJANJIAN);
     createDashboardContract(RentalContract::WORKFLOW_SEMAKAN_PUU);
     createDashboardContract(RentalContract::WORKFLOW_MENUNGGU_SEMAKAN_NEGERI, 'Johor', now()->addMonths(4)->toDateString());
+    createDashboardContract(RentalContract::WORKFLOW_MENUNGGU_SEMAKAN_NEGERI, 'Johor', now()->addMonths(2)->toDateString());
     createDashboardContract(RentalContract::WORKFLOW_MENUNGGU_SEMAKAN_NEGERI, 'Johor', now()->addMonths(20)->toDateString());
 
     $response = $this->actingAs($admin)->get(route('dashboard'));
@@ -63,8 +64,11 @@ test('dashboard shows accurate counts based on current workflow data', function 
     $response->assertSuccessful()
         ->assertViewHas('permohonanBaharu', 1)
         ->assertViewHas('progressPermohonan', 2)
-        ->assertViewHas('kontrakAktif', 2)
+        ->assertViewHas('kontrakAktif', 3)
         ->assertViewHas('kontrakLapanBulan', 1)
+        ->assertViewHas('kontrakTigaBulan', 1)
+        ->assertViewHas('kontrakLebihLapanBulan', 1)
+        ->assertSee('Papan Pemuka')
         ->assertSee('Permohonan Baharu')
         ->assertSee('Dalam Tindakan')
         ->assertSee('Status Tindakan')
@@ -73,7 +77,10 @@ test('dashboard shows accurate counts based on current workflow data', function 
         ->assertSee('Semakan PUU')
         ->assertSee('Tindakan Mati Setem')
         ->assertSee('Kontrak Aktif')
-        ->assertSee('Kontrak &le; 8 Bulan', false)
+        ->assertSee('Kontrak Bawah 8 Bulan')
+        ->assertSee('Kontrak Bawah 3 Bulan')
+        ->assertSee('Taburan Baki Tempoh Kontrak')
+        ->assertSee('Bilangan Mengikut Status Tindakan')
         ->assertDontSee('Dalam Tindakan – Mengikut Status')
         ->assertDontSee('Permohonan Terkini')
         ->assertDontSee('Status Aliran Kerja Permohonan')
@@ -85,6 +92,13 @@ test('dashboard shows accurate counts based on current workflow data', function 
         ->and(collect($breakdown)->firstWhere('key', \App\Support\StatusTindakan::SEDIA_DRAF_PERJANJIAN)['count'])->toBe(1)
         ->and(collect($breakdown)->firstWhere('key', \App\Support\StatusTindakan::SEMAKAN_PUU)['count'])->toBe(1)
         ->and(collect($breakdown)->sum('count'))->toBe(2);
+
+    $tigaList = $response->viewData('alertListTigaBulan');
+    $lapanList = $response->viewData('alertListLapanBulan');
+
+    expect($tigaList)->toHaveCount(1)
+        ->and($lapanList)->toHaveCount(1)
+        ->and($tigaList->first()->id)->not->toBe($lapanList->first()->id);
 });
 
 test('dashboard dalam tindakan card links to status breakdown section', function () {

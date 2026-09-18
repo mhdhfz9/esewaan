@@ -1491,7 +1491,8 @@ test('admin negeri completes mati setem and moves application into kontrak sewaa
 
     $this->actingAs($negeriAdmin)
         ->post(route('status-permohonan.complete-mati-setem', $contract), [
-            'mati_setem_acknowledged' => '1',
+            'mati_setem_lhdn_acknowledged' => '1',
+            'edaran_pemilik_acknowledged' => '1',
         ])
         ->assertRedirect(route('kontrak-sewaan.index'))
         ->assertSessionHas('success');
@@ -1499,7 +1500,8 @@ test('admin negeri completes mati setem and moves application into kontrak sewaa
     expect($contract->fresh()->workflow_tahap)->toBe(RentalContract::WORKFLOW_MENUNGGU_SEMAKAN_NEGERI)
         ->and($contract->fresh()->isHqApproved())->toBeTrue()
         ->and($contract->fresh()->status_aktif)->toBe('aktif')
-        ->and($contract->fresh()->negeri_mati_setem_acknowledgements['mati_setem_acknowledged'])->toBeTrue();
+        ->and($contract->fresh()->negeri_mati_setem_acknowledgements['mati_setem_lhdn_acknowledged'])->toBeTrue()
+        ->and($contract->fresh()->negeri_mati_setem_acknowledgements['edaran_pemilik_acknowledged'])->toBeTrue();
 
     $this->actingAs($negeriAdmin)
         ->get(route('kontrak-sewaan.index'))

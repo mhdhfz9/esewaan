@@ -637,7 +637,10 @@
                             @endforeach
                         </div>
 
-                        @error('mati_setem_acknowledged')
+                        @error('mati_setem_lhdn_acknowledged')
+                            <p class="text-xs text-red-600">{{ $message }}</p>
+                        @enderror
+                        @error('edaran_pemilik_acknowledged')
                             <p class="text-xs text-red-600">{{ $message }}</p>
                         @enderror
 

@@ -4,7 +4,9 @@ namespace App\Support;
 
 class NegeriMatiSetemAcknowledgements
 {
-    public const MATI_SETEM_SELESAI = 'mati_setem_acknowledged';
+    public const MATI_SETEM_LHDN = 'mati_setem_lhdn_acknowledged';
+
+    public const EDARAN_PEMILIK = 'edaran_pemilik_acknowledged';
 
     /**
      * @return list<string>
@@ -12,7 +14,8 @@ class NegeriMatiSetemAcknowledgements
     public static function keys(): array
     {
         return [
-            self::MATI_SETEM_SELESAI,
+            self::MATI_SETEM_LHDN,
+            self::EDARAN_PEMILIK,
         ];
     }
 
@@ -22,7 +25,8 @@ class NegeriMatiSetemAcknowledgements
     public static function labels(): array
     {
         return [
-            self::MATI_SETEM_SELESAI => 'Dokumen perjanjian telah dimatikan setem dan diedarkan kepada pemilik premis.',
+            self::MATI_SETEM_LHDN => '3 Salinan Dokumen Perjanjian telah dimatikan setem di LHDN',
+            self::EDARAN_PEMILIK => '1 Salinan Dokumen Perjanjian telah diedar kepada Pemilik Premis',
         ];
     }
 

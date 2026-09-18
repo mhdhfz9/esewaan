@@ -21,6 +21,10 @@ class SidebarNotificationController extends Controller
                 ? max($counts['status_permohonan'], $counts['hq_pending_withdrawal'])
                 : $counts['status_permohonan'],
             'kontrak_sewaan' => $counts['kontrak_sewaan'],
+            'inbox_total' => $counts['inbox_total'],
+            'inbox_items' => $user->isAdmin()
+                ? $service->inboxItemsPayload($user, 8)
+                : [],
         ]);
     }
 }

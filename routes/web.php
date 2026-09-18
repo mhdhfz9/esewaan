@@ -9,6 +9,7 @@ use App\Http\Controllers\ContractDocumentController;
 use App\Http\Controllers\ContractFollowUpController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\KontrakSewaanController;
+use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\RentalApplicationController;
 use App\Http\Controllers\SidebarNotificationController;
@@ -83,6 +84,11 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/sidebar-notifications', SidebarNotificationController::class)
         ->name('sidebar-notifications')
         ->middleware('throttle:sidebar-notifications');
+
+    Route::get('/peti-masuk', [NotificationController::class, 'index'])->name('notifications.index');
+    Route::post('/peti-masuk/baca-semua', [NotificationController::class, 'markAllAsRead'])
+        ->name('notifications.mark-all-read')
+        ->middleware('throttle:form-actions');
 
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
     Route::get('/kontrak-sewaan', [KontrakSewaanController::class, 'index'])->name('kontrak-sewaan.index');

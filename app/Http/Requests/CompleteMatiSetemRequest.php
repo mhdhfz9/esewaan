@@ -30,7 +30,8 @@ class CompleteMatiSetemRequest extends FormRequest
     public function rules(): array
     {
         return [
-            NegeriMatiSetemAcknowledgements::MATI_SETEM_SELESAI => ['accepted'],
+            NegeriMatiSetemAcknowledgements::MATI_SETEM_LHDN => ['accepted'],
+            NegeriMatiSetemAcknowledgements::EDARAN_PEMILIK => ['accepted'],
         ];
     }
 
@@ -40,7 +41,8 @@ class CompleteMatiSetemRequest extends FormRequest
     public function messages(): array
     {
         return [
-            NegeriMatiSetemAcknowledgements::MATI_SETEM_SELESAI.'.accepted' => 'Sila sahkan dokumen telah dimatikan setem sebelum menekan Selesai.',
+            NegeriMatiSetemAcknowledgements::MATI_SETEM_LHDN.'.accepted' => 'Sila sahkan 3 salinan dokumen telah dimatikan setem di LHDN sebelum menekan Selesai.',
+            NegeriMatiSetemAcknowledgements::EDARAN_PEMILIK.'.accepted' => 'Sila sahkan 1 salinan dokumen telah diedar kepada Pemilik Premis sebelum menekan Selesai.',
         ];
     }
 }

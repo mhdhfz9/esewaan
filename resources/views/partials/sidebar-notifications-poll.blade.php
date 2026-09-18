@@ -14,6 +14,10 @@
             const key = entry[0];
             const count = entry[1];
 
+            if (key === 'inbox_items') {
+                return;
+            }
+
             document.querySelectorAll('[data-sidebar-notification-badge="' + key + '"]').forEach(function (badge) {
                 if (count > 0) {
                     badge.textContent = formatBadgeCount(count);
@@ -31,7 +35,12 @@
             });
         });
 
+        if (Array.isArray(counts.inbox_items) && typeof window.__esewaanRenderHeaderInbox === 'function') {
+            window.__esewaanRenderHeaderInbox(counts.inbox_items);
+        }
+
         previousCounts = Object.assign({}, counts);
+        delete previousCounts.inbox_items;
     }
 
     function poll() {

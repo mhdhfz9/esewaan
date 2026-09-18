@@ -72,6 +72,34 @@
         box-shadow: 0 4px 22px rgba(0, 0, 0, 0.35);
     }
 
+    html[data-theme="dark"] .header-inbox-toggle {
+        background: #1e293b;
+        border-color: #64748b;
+        color: #f8fafc;
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
+    }
+
+    html[data-theme="dark"] .header-inbox-toggle:hover {
+        background: #334155;
+        border-color: #94a3b8;
+        color: #ffffff;
+    }
+
+    html[data-theme="dark"] .header-inbox-panel {
+        background: #0f172a;
+        border-color: #64748b;
+        box-shadow: 0 16px 40px rgba(0, 0, 0, 0.55);
+    }
+
+    html[data-theme="dark"] .header-inbox-panel .bg-slate-50,
+    html[data-theme="dark"] .header-inbox-panel .bg-white {
+        background: #0f172a !important;
+    }
+
+    html[data-theme="dark"] .header-inbox-panel a:hover {
+        background: rgba(99, 102, 241, 0.18) !important;
+    }
+
     html[data-theme="dark"] .glass-card,
     html[data-theme="dark"] .glass,
     html[data-theme="dark"] .glass-panel,

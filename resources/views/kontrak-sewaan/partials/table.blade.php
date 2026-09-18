@@ -65,15 +65,39 @@
                                             title="Buka borang {{ $susulanLabel }}"
                                         >{{ $susulanLabel }}</a>
                                     @else
-                                        <form method="POST" action="{{ route('kontrak-sewaan.follow-up', $c) }}">
+                                        <form
+                                            id="pindah-follow-up-form-{{ $c->id }}"
+                                            method="POST"
+                                            action="{{ route('kontrak-sewaan.follow-up', $c) }}"
+                                        >
                                             @csrf
                                             <input type="hidden" name="kategori_permohonan" value="pindah">
-                                            <button type="submit" class="rounded-lg border border-slate-300 px-2.5 py-1 text-xs font-medium text-slate-800 transition-colors hover:bg-slate-100">Pindah</button>
+                                            <button
+                                                type="button"
+                                                class="kontrak-confirm-trigger rounded-lg border border-slate-300 px-2.5 py-1 text-xs font-medium text-slate-800 transition-colors hover:bg-slate-100"
+                                                data-confirm-title="Mulakan Permohonan Pindah"
+                                                data-confirm-message="Anda pasti mahu memulakan permohonan Pindah untuk premis {{ $c->displayPremisePtjName() }}? Kontrak ini akan dikeluarkan dari senarai aktif sementara permohonan diproses."
+                                                data-confirm-form="pindah-follow-up-form-{{ $c->id }}"
+                                                data-confirm-button="Ya, Pindah"
+                                                data-confirm-tone="primary"
+                                            >Pindah</button>
                                         </form>
-                                        <form method="POST" action="{{ route('kontrak-sewaan.follow-up', $c) }}">
+                                        <form
+                                            id="lanjutan-follow-up-form-{{ $c->id }}"
+                                            method="POST"
+                                            action="{{ route('kontrak-sewaan.follow-up', $c) }}"
+                                        >
                                             @csrf
                                             <input type="hidden" name="kategori_permohonan" value="lanjutan">
-                                            <button type="submit" class="rounded-lg border border-emerald-200 px-2.5 py-1 text-xs font-medium text-emerald-700 transition-colors hover:bg-emerald-50">Lanjutan</button>
+                                            <button
+                                                type="button"
+                                                class="kontrak-confirm-trigger rounded-lg border border-emerald-200 px-2.5 py-1 text-xs font-medium text-emerald-700 transition-colors hover:bg-emerald-50"
+                                                data-confirm-title="Mulakan Permohonan Lanjutan"
+                                                data-confirm-message="Anda pasti mahu memulakan permohonan Lanjutan untuk premis {{ $c->displayPremisePtjName() }}? Kontrak ini akan dikeluarkan dari senarai aktif sementara permohonan diproses."
+                                                data-confirm-form="lanjutan-follow-up-form-{{ $c->id }}"
+                                                data-confirm-button="Ya, Lanjutan"
+                                                data-confirm-tone="success"
+                                            >Lanjutan</button>
                                         </form>
                                     @endif
                                 @endif

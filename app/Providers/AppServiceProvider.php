@@ -51,7 +51,14 @@ class AppServiceProvider extends ServiceProvider
                 return;
             }
 
-            $view->with('sidebarNotifications', app(SidebarNotificationService::class)->forUser($user));
+            $service = app(SidebarNotificationService::class);
+
+            $view->with([
+                'sidebarNotifications' => $service->forUser($user),
+                'inboxPreviewItems' => $user->isAdmin()
+                    ? $service->inboxItems($user, 8)
+                    : collect(),
+            ]);
         });
     }
 

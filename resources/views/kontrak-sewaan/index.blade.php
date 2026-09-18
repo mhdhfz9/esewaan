@@ -60,6 +60,8 @@
         @include($tab === 'history' ? 'kontrak-sewaan.partials.history-table' : 'kontrak-sewaan.partials.table')
     </div>
 </div>
+
+@include('partials.confirm-action-modal')
 @endsection
 
 @push('scripts')
@@ -78,6 +80,21 @@
     let debounceTimer = null;
     let controller = null;
 
+    const modal = document.getElementById('confirm-action-modal');
+    const modalTitle = document.getElementById('confirm-action-title');
+    const modalMessage = document.getElementById('confirm-action-message');
+    const modalDetailsWrap = document.getElementById('confirm-action-details-wrap');
+    const modalReasonWrap = document.getElementById('confirm-action-reason-wrap');
+    const modalIcon = document.getElementById('confirm-action-icon');
+    const modalCancel = document.getElementById('confirm-action-cancel');
+    const modalConfirm = document.getElementById('confirm-action-confirm');
+    let pendingForm = null;
+
+    const iconTemplates = {
+        success: '<svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" /></svg>',
+        primary: '<svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>',
+    };
+
     function setLoading(isLoading) {
         if (!loading) return;
         loading.classList.toggle('hidden', !isLoading);
@@ -94,6 +111,63 @@
                 ? 'Cari kontrak tamat tempoh...'
                 : 'Cari nama premis, negeri, kategori...';
         }
+    }
+
+    function closeConfirmModal() {
+        if (!modal) return;
+        modal.classList.add('hidden');
+        pendingForm = null;
+        document.body.classList.remove('overflow-hidden');
+    }
+
+    function openConfirmModal(trigger) {
+        if (!modal || !modalTitle || !modalMessage || !modalConfirm) return;
+
+        const form = document.getElementById(trigger.dataset.confirmForm);
+        if (!form) return;
+
+        const tone = trigger.dataset.confirmTone || 'primary';
+
+        modalTitle.textContent = trigger.dataset.confirmTitle || 'Sahkan Tindakan';
+        modalMessage.textContent = trigger.dataset.confirmMessage || '';
+
+        if (modalDetailsWrap) {
+            modalDetailsWrap.classList.add('hidden');
+        }
+        if (modalReasonWrap) {
+            modalReasonWrap.classList.add('hidden');
+        }
+
+        modalConfirm.textContent = trigger.dataset.confirmButton || 'Sahkan';
+        modalConfirm.dataset.requireReason = 'false';
+        modalConfirm.className = 'rounded-xl px-4 py-2 text-sm font-medium';
+
+        if (tone === 'success') {
+            modalConfirm.classList.add('glass-btn-success');
+        } else {
+            modalConfirm.classList.add('glass-btn-primary');
+        }
+
+        if (modalIcon) {
+            modalIcon.className = 'mb-4 flex h-11 w-11 items-center justify-center rounded-full';
+            if (tone === 'success') {
+                modalIcon.classList.add('bg-emerald-50', 'text-emerald-600');
+            } else {
+                modalIcon.classList.add('bg-slate-100', 'text-slate-600');
+            }
+            modalIcon.innerHTML = iconTemplates[tone] || iconTemplates.primary;
+        }
+
+        pendingForm = form;
+        modal.classList.remove('hidden');
+        document.body.classList.add('overflow-hidden');
+        modalConfirm.focus();
+    }
+
+    function bindConfirmTriggers() {
+        list.querySelectorAll('.kontrak-confirm-trigger').forEach((trigger) => {
+            trigger.addEventListener('click', () => openConfirmModal(trigger));
+        });
     }
 
     function fetchList(pageNumber) {
@@ -142,6 +216,8 @@
                 fetchList(url.searchParams.get('page') || 1);
             });
         });
+
+        bindConfirmTriggers();
     }
 
     page.querySelectorAll('[data-kontrak-tab]').forEach((button) => {
@@ -157,6 +233,30 @@
             fetchList(1);
         });
     });
+
+    if (modalCancel) {
+        modalCancel.addEventListener('click', closeConfirmModal);
+    }
+
+    if (modalConfirm) {
+        modalConfirm.addEventListener('click', () => {
+            if (!pendingForm) return;
+            pendingForm.submit();
+            closeConfirmModal();
+        });
+    }
+
+    if (modal) {
+        modal.querySelectorAll('[data-confirm-dismiss]').forEach((element) => {
+            element.addEventListener('click', closeConfirmModal);
+        });
+
+        document.addEventListener('keydown', (event) => {
+            if (event.key === 'Escape' && !modal.classList.contains('hidden')) {
+                closeConfirmModal();
+            }
+        });
+    }
 
     searchInput?.addEventListener('input', () => {
         clearTimeout(debounceTimer);

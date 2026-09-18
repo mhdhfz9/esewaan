@@ -68,6 +68,21 @@ function createApprovedParentContract(
     ]);
 }
 
+test('kontrak sewaan list requires confirmation before pindah or lanjutan', function () {
+    $admin = User::factory()->create(['role' => 'admin_negeri', 'negeri' => 'Johor']);
+    createApprovedParentContract('Johor');
+
+    $this->actingAs($admin)
+        ->get(route('kontrak-sewaan.index'))
+        ->assertSuccessful()
+        ->assertSee('id="confirm-action-modal"', false)
+        ->assertSee('kontrak-confirm-trigger', false)
+        ->assertSee('data-confirm-title="Mulakan Permohonan Pindah"', false)
+        ->assertSee('data-confirm-title="Mulakan Permohonan Lanjutan"', false)
+        ->assertSee('data-confirm-button="Ya, Pindah"', false)
+        ->assertSee('data-confirm-button="Ya, Lanjutan"', false);
+});
+
 test('admin negeri can start a lanjutan from an existing contract', function () {
     $admin = User::factory()->create(['role' => 'admin_negeri', 'negeri' => 'Johor']);
     $parent = createApprovedParentContract('Johor', 1200);

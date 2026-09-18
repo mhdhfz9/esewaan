@@ -65,7 +65,7 @@
                     @if(auth()->user()->isAdminHq())
                     <a href="{{ route('dashboard') }}" class="sidebar-nav-link {{ request()->routeIs('dashboard') ? 'is-active' : '' }}">
                         <svg class="w-5 h-5 flex-shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" /></svg>
-                        <span>Dashboard</span>
+                        <span>Papan Pemuka</span>
                     </a>
                     @endif
                     @if(auth()->user()->isAdmin())
@@ -121,7 +121,7 @@
                         <svg class="h-5 w-5 shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
                         </svg>
-                        <span>Dashboard</span>
+                        <span>Papan Pemuka</span>
                     </a>
                     @endif
                     @if(auth()->user()->isAdmin())
@@ -139,8 +139,8 @@
         @include('partials.sidebar-state')
 
         {{-- Main content --}}
-        <div class="flex-1 flex flex-col min-w-0 overflow-hidden">
-            <header class="glass-header flex h-20 flex-shrink-0 items-center justify-between px-4 lg:px-6">
+        <div class="flex min-h-0 flex-1 flex-col min-w-0">
+            <header class="glass-header relative z-30 flex h-20 flex-shrink-0 items-center justify-between px-4 lg:px-6">
                 <div class="flex items-center gap-3">
                     <button type="button" id="mobile-open-sidebar" class="lg:hidden p-2 rounded-xl glass-subtle hover:bg-white/60 transition-colors">
                         <svg class="w-5 h-5 text-gray-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" /></svg>
@@ -150,9 +150,12 @@
                         <p class="text-xs text-slate-500 hidden sm:block">@yield('header_subtitle', 'Sistem Pengurusan Kontrak Sewaan AADK')</p>
                     </div>
                 </div>
+                @if(auth()->user()->isAdmin())
+                    @include('partials.header-inbox')
+                @endif
             </header>
 
-            <main class="flex-1 overflow-y-auto">
+            <main class="min-h-0 flex-1 overflow-y-auto">
                 <div class="p-4 lg:p-6">
                     @if(session('success'))
                     <div class="mb-4 rounded-xl glass-alert-success p-4 text-green-800 text-sm" role="alert">{{ session('success') }}</div>

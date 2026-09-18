@@ -49,7 +49,9 @@ test('sidebar notifications endpoint returns current badge counts for admin nege
         ->assertJson([
             'list_menu' => 1,
             'kontrak_sewaan' => 1,
-        ]);
+            'inbox_total' => 2,
+        ])
+        ->assertJsonCount(2, 'inbox_items');
 });
 
 test('sidebar notifications endpoint uses max count for admin hq list menu badge', function () {
@@ -84,6 +86,7 @@ test('sidebar notifications endpoint uses max count for admin hq list menu badge
         ->assertJson([
             'list_menu' => 1,
             'kontrak_sewaan' => 0,
+            'inbox_total' => 1,
         ]);
 });
 
