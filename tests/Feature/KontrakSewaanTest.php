@@ -357,5 +357,12 @@ test('kontrak sewaan show displays hq jrp checklist with dates for admin negeri'
         ->assertSee('Status Draf Perjanjian')
         ->assertSee('Semakan 2')
         ->assertSee('Pengesahan & Tandatangan', false)
-        ->assertSee('Permohonan telah selesai dan dimasukkan ke dalam Senarai Kontrak Sewaan');
+        ->assertSee('Permohonan telah selesai dan dimasukkan ke dalam Senarai Kontrak Sewaan')
+        ->assertSee('data-progress-steps="0"', false)
+        ->assertSee('data-progress-steps="1"', false)
+        ->assertSee('data-progress-steps="2 3 4"', false)
+        ->assertSee('data-progress-steps="5"', false)
+        ->assertSee('data-progress-steps="6"', false)
+        ->assertSee('data-progress-steps="7"', false)
+        ->assertSee('Klik pada mana-mana langkah untuk pergi ke bahagian berkenaan');
 });

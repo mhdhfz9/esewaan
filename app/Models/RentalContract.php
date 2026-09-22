@@ -15,6 +15,8 @@ class RentalContract extends Model
 {
     use SoftDeletes;
 
+    protected $table = 'status_permohonan';
+
     protected static function booted(): void
     {
         static::updating(function (RentalContract $contract): void {
@@ -329,13 +331,16 @@ class RentalContract extends Model
      */
     public function scopeOrderForUserList(Builder $query, User $user, string $recencyColumn = 'updated_at'): Builder
     {
+        $contractTable = $query->getModel()->getTable();
+        $notificationTable = (new RentalContractNotificationView)->getTable();
+
         return $query
             ->orderByRaw(
-                '(select count(*) from rental_contract_notification_views where rental_contract_notification_views.rental_contract_id = rental_contracts.id and rental_contract_notification_views.user_id = ?) asc',
+                "(select count(*) from {$notificationTable} where {$notificationTable}.rental_contract_id = {$contractTable}.id and {$notificationTable}.user_id = ?) asc",
                 [$user->id]
             )
             ->orderByDesc($recencyColumn)
-            ->orderByDesc('rental_contracts.id');
+            ->orderByDesc("{$contractTable}.id");
     }
 
     public function displayNamaPtj(): string
@@ -525,12 +530,11 @@ class RentalContract extends Model
     public function draftAgreementCurrentStepIndex(): int
     {
         return match (true) {
-            $this->isHqApproved() => 8,
-            $this->isMatiSetem() => 7,
-            $this->isDrafDikembalikanHq() => 6,
-            $this->isDrafPerjanjianLulus() => 5,
-            $this->isPindaanBerdasarkanPuu() => 4,
-            $this->isSemakanPuu() => 3,
+            $this->isHqApproved() => 7,
+            $this->isMatiSetem() => 6,
+            $this->isDrafDikembalikanHq() => 5,
+            $this->isDrafPerjanjianLulus() => 4,
+            $this->isPindaanBerdasarkanPuu(), $this->isSemakanPuu() => 3,
             $this->isPenyediaanDrafPerjanjian() => 2,
             $this->isPendingHqReview() => 1,
             default => 0,
@@ -546,13 +550,11 @@ class RentalContract extends Model
     {
         $currentIndex = $this->draftAgreementCurrentStepIndex();
 
-        $puuDescription = $this->isSemakanPuu()
-            ? $this->semakanLabel()
-            : 'Semakan oleh PUU';
-
-        $pindaanDescription = $this->isPindaanBerdasarkanPuu()
-            ? 'Pindaan mengikut ulasan PUU'
-            : 'Menunggu kelulusan PUU';
+        $puuDescription = match (true) {
+            $this->isPindaanBerdasarkanPuu() => 'Pindaan mengikut ulasan PUU',
+            $this->isSemakanPuu() => $this->semakanLabel(),
+            default => 'Semakan oleh PUU',
+        };
 
         $drafLulusDescription = $this->isDrafPerjanjianLulus()
             ? 'Selesai'
@@ -563,7 +565,6 @@ class RentalContract extends Model
             ['label' => 'Semakan Ibu Pejabat', 'description' => 'Pengesahan permohonan'],
             ['label' => 'Penyediaan Draf', 'description' => 'Penyediaan draf perjanjian'],
             ['label' => 'Dalam tindakan PUU', 'description' => $puuDescription],
-            ['label' => 'Pindaan Berdasarkan PUU', 'description' => $pindaanDescription],
             ['label' => 'Draf Lulus', 'description' => $drafLulusDescription],
             ['label' => 'Pengesahan & Tandatangan', 'description' => 'Dokumen ditandatangani'],
             ['label' => 'Mati Setem', 'description' => 'Setem dimatikan'],

@@ -381,6 +381,29 @@
                                     </button>
                                 </form>
                             </div>
+                        @elseif(auth()->user()->isAdminHq() && $contract->isPindaanBerdasarkanPuu())
+                            <p class="text-sm text-slate-600">Pindaan draf perjanjian mengikut ulasan dan keputusan PUU.</p>
+                            <div class="flex flex-wrap items-center justify-end gap-2 border-t border-slate-200 pt-4">
+                                <form
+                                    id="complete-pindaan-form"
+                                    method="POST"
+                                    action="{{ route('status-permohonan.complete', $contract) }}"
+                                    class="inline"
+                                >
+                                    @csrf
+                                    <button
+                                        type="button"
+                                        class="status-confirm-trigger glass-btn-success rounded-lg px-4 py-2 text-sm font-medium"
+                                        data-confirm-title="Selesaikan Pindaan PUU"
+                                        data-confirm-message="Pindaan berdasarkan PUU selesai dan permohonan akan diteruskan ke Draf Lulus. Teruskan?"
+                                        data-confirm-form="complete-pindaan-form"
+                                        data-confirm-button="Ya, Selesai"
+                                        data-confirm-tone="success"
+                                    >
+                                        Selesai
+                                    </button>
+                                </form>
+                            </div>
                         @elseif($currentStepIndex > 3)
                             <p class="text-sm text-slate-600">Semakan PUU untuk pusingan semasa telah selesai.</p>
                         @endif
@@ -391,36 +414,8 @@
             </section>
         </div>
 
-        {{-- Langkah 5: Pindaan Berdasarkan PUU --}}
+        {{-- Langkah 5: Draf Lulus --}}
         <div data-step-panel="4" class="space-y-4 {{ $currentStepIndex === 4 ? '' : 'hidden' }}">
-            <section class="glass-card overflow-hidden">
-                <div class="glass-divider-soft border-b px-4 py-3">
-                    <h2 class="text-base font-semibold text-slate-900">Pindaan Berdasarkan PUU</h2>
-                    <p class="mt-0.5 text-xs text-slate-500">Pindaan draf perjanjian mengikut ulasan dan keputusan PUU.</p>
-                </div>
-                <div class="space-y-4 px-4 py-3">
-                    @if($currentStepIndex >= 4)
-                        <p class="text-[11px] font-semibold uppercase tracking-wide text-gray-500">Status Semasa</p>
-                        <span class="{{ $contract->applicationStatusBadgeClass() }} mt-1 inline-flex">
-                            {{ $contract->applicationStatusLabel(auth()->user()) }}
-                        </span>
-
-                        @include('status-permohonan.partials.draft-document-history', ['contract' => $contract])
-
-                        @if($currentStepIndex === 4)
-                            <p class="text-sm text-slate-600">Pindaan draf perjanjian mengikut ulasan dan keputusan PUU.</p>
-                        @elseif($currentStepIndex > 4)
-                            <p class="text-sm text-slate-600">Pindaan draf berdasarkan PUU telah selesai.</p>
-                        @endif
-                    @else
-                        <p class="text-sm text-slate-500">Peringkat ini belum bermula.</p>
-                    @endif
-                </div>
-            </section>
-        </div>
-
-        {{-- Langkah 6: Draf Lulus --}}
-        <div data-step-panel="5" class="space-y-4 {{ $currentStepIndex === 5 ? '' : 'hidden' }}">
             @if(auth()->user()->isAdminNegeri() && $contract->isDrafPerjanjianLulus())
                 <section class="glass-card overflow-hidden">
                     <div class="glass-divider-soft border-b px-4 py-3">
@@ -495,15 +490,15 @@
                     </div>
                     <div class="space-y-4 px-4 py-3">
                         <p class="text-sm text-slate-600">
-                            @if($currentStepIndex > 5)
+                            @if($currentStepIndex > 4)
                                 Draf perjanjian telah diluluskan dan tindakan Negeri telah selesai.
-                            @elseif($currentStepIndex === 5)
+                            @elseif($currentStepIndex === 4)
                                 Menunggu tindakan Pegawai Negeri untuk mengesahkan penerimaan draf akhir.
                             @else
                                 Peringkat ini belum bermula.
                             @endif
                         </p>
-                        @if($currentStepIndex > 5)
+                        @if($currentStepIndex > 4)
                             <div class="glass-subtle rounded-xl border border-slate-200/60 p-4">
                                 <p class="text-sm font-semibold text-slate-900">Tindakan Negeri</p>
                                 <p class="mt-0.5 text-xs text-slate-500">Pengesahan yang telah ditandakan.</p>
@@ -520,8 +515,8 @@
             @endif
         </div>
 
-        {{-- Langkah 7: Pengesahan & Tandatangan --}}
-        <div data-step-panel="6" class="space-y-4 {{ $currentStepIndex === 6 ? '' : 'hidden' }}">
+        {{-- Langkah 6: Pengesahan & Tandatangan --}}
+        <div data-step-panel="5" class="space-y-4 {{ $currentStepIndex === 5 ? '' : 'hidden' }}">
             @if(auth()->user()->isAdminHq() && $contract->isDrafDikembalikanHq())
                 <section class="glass-card overflow-hidden">
                     <div class="glass-divider-soft border-b px-4 py-3">
@@ -593,9 +588,9 @@
                     </div>
                     <div class="px-4 py-3">
                         <p class="text-sm text-slate-600">
-                            @if($currentStepIndex > 6)
+                            @if($currentStepIndex > 5)
                                 Perjanjian telah disahkan dan dihantar kepada Negeri untuk Mati Setem.
-                            @elseif($currentStepIndex === 6)
+                            @elseif($currentStepIndex === 5)
                                 Menunggu tindakan Ibu Pejabat untuk pengesahan dan tandatangan perjanjian.
                             @else
                                 Peringkat ini belum bermula.
@@ -606,8 +601,8 @@
             @endif
         </div>
 
-        {{-- Langkah 8: Mati Setem --}}
-        <div data-step-panel="7" class="space-y-4 {{ $currentStepIndex === 7 ? '' : 'hidden' }}">
+        {{-- Langkah 7: Mati Setem --}}
+        <div data-step-panel="6" class="space-y-4 {{ $currentStepIndex === 6 ? '' : 'hidden' }}">
             @if(auth()->user()->isAdminNegeri() && $contract->isMatiSetem())
                 <section class="glass-card overflow-hidden">
                     <div class="glass-divider-soft border-b px-4 py-3">
@@ -676,15 +671,15 @@
                     </div>
                     <div class="space-y-4 px-4 py-3">
                         <p class="text-sm text-slate-600">
-                            @if($currentStepIndex > 7)
+                            @if($currentStepIndex > 6)
                                 Mati setem telah selesai dan permohonan dimasukkan ke dalam Senarai Kontrak Sewaan.
-                            @elseif($currentStepIndex === 7)
+                            @elseif($currentStepIndex === 6)
                                 Menunggu tindakan Negeri untuk mati setem.
                             @else
                                 Peringkat ini belum bermula.
                             @endif
                         </p>
-                        @if($currentStepIndex > 7)
+                        @if($currentStepIndex > 6)
                             <div class="glass-subtle rounded-xl border border-slate-200/60 p-4">
                                 @include('status-permohonan.partials.negeri-mati-setem-readonly', [
                                     'contract' => $contract,
@@ -697,15 +692,15 @@
             @endif
         </div>
 
-        {{-- Langkah 9: Selesai --}}
-        <div data-step-panel="8" class="space-y-4 {{ $currentStepIndex === 8 ? '' : 'hidden' }}">
+        {{-- Langkah 8: Selesai --}}
+        <div data-step-panel="7" class="space-y-4 {{ $currentStepIndex === 7 ? '' : 'hidden' }}">
             <section class="glass-card overflow-hidden">
                 <div class="glass-divider-soft border-b px-4 py-3">
                     <h2 class="text-base font-semibold text-slate-900">Selesai</h2>
                     <p class="mt-0.5 text-xs text-slate-500">Permohonan selesai dan dimasukkan ke dalam Senarai Kontrak Sewaan.</p>
                 </div>
                 <div class="px-4 py-3">
-                    @if($currentStepIndex >= 8)
+                    @if($currentStepIndex >= 7)
                         <p class="text-sm text-emerald-700">Permohonan telah selesai dan dimasukkan ke dalam Senarai Kontrak Sewaan.</p>
                     @else
                         <p class="text-sm text-slate-600">Peringkat ini belum bermula. Permohonan akan dimasukkan ke dalam Senarai Kontrak Sewaan selepas Mati Setem selesai.</p>
@@ -811,7 +806,7 @@
     const buttons = Array.from(document.querySelectorAll('[data-step-index]'));
     if (!panels.length) return;
 
-    function activate(index) {
+    function activate(index, { scroll = true } = {}) {
         panels.forEach((panel) => {
             panel.classList.toggle('hidden', panel.dataset.stepPanel !== index);
         });
@@ -825,6 +820,11 @@
                 circle.classList.toggle('outline-indigo-400', isViewing);
             }
         });
+
+        if (scroll) {
+            const activePanel = panels.find((panel) => panel.dataset.stepPanel === index);
+            activePanel?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
     }
 
     buttons.forEach((button) => {
@@ -834,7 +834,7 @@
         });
     });
 
-    activate(String(@json($currentStepIndex)));
+    activate(String(@json($currentStepIndex)), { scroll: false });
 })();
 </script>
 <script>

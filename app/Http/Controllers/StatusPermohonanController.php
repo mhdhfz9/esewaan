@@ -598,15 +598,17 @@ class StatusPermohonanController extends Controller
             ? $this->historyQuery($user, $search)
             : $this->contractsQuery($user, $search);
 
+        $table = (new RentalContract)->getTable();
+
         $contracts = (clone $query)
             ->select([
-                'rental_contracts.id',
-                'rental_contracts.updated_at',
-                'rental_contracts.withdrawal_status',
-                'rental_contracts.workflow_tahap',
-                'rental_contracts.deleted_at',
+                "{$table}.id",
+                "{$table}.updated_at",
+                "{$table}.withdrawal_status",
+                "{$table}.workflow_tahap",
+                "{$table}.deleted_at",
             ])
-            ->orderBy('rental_contracts.id')
+            ->orderBy("{$table}.id")
             ->get();
 
         if ($contracts->isEmpty()) {
@@ -648,8 +650,8 @@ class StatusPermohonanController extends Controller
             ->tap(fn (Builder $query) => RentalContractListSearch::apply($query, $search, [
                 'include_peringkat_proses' => true,
             ]))
-            ->orderByDesc('rental_contracts.created_at')
-            ->orderByDesc('rental_contracts.id');
+            ->orderByDesc((new RentalContract)->getTable().'.created_at')
+            ->orderByDesc((new RentalContract)->getTable().'.id');
     }
 
     /**

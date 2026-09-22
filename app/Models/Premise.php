@@ -9,6 +9,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Premise extends Model
 {
+    protected $table = 'premis';
+
     protected $fillable = [
         'nama_ptj',
         'negeri',

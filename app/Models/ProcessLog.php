@@ -7,6 +7,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class ProcessLog extends Model
 {
+    protected $table = 'log_proses';
+
     public $timestamps = false;
 
     protected $fillable = [

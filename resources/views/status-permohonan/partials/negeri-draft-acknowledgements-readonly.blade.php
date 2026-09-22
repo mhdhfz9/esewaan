@@ -4,7 +4,7 @@
     $savedAcknowledgements = is_array($contract->negeri_draft_acknowledgements)
         ? $contract->negeri_draft_acknowledgements
         : [];
-    $acknowledgementsCompleted = $acknowledgementsCompleted ?? ($contract->draftAgreementCurrentStepIndex() > 5);
+    $acknowledgementsCompleted = $acknowledgementsCompleted ?? ($contract->draftAgreementCurrentStepIndex() > 4);
 @endphp
 
 <div class="space-y-3">

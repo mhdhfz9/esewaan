@@ -7,6 +7,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class ContractDocument extends Model
 {
+    protected $table = 'dokumen_kontrak';
+
     public const JENIS_DRAF_PERJANJIAN = 'draf_perjanjian';
 
     public const SEMAKAN_MENUNGGU = 'menunggu';

@@ -9,3 +9,7 @@ Artisan::command('inspire', function () {
 })->purpose('Display an inspiring quote');
 
 Schedule::command('contracts:send-expiry-notification')->daily();
+
+Schedule::command('contracts:send-under-three-months-reminder')
+    ->weeklyOn(1, '09:00')
+    ->timezone('Asia/Kuala_Lumpur');

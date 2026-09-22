@@ -7,6 +7,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class RentalContractNotificationView extends Model
 {
+    protected $table = 'notifikasi_status_permohonan';
+
     protected $fillable = [
         'user_id',
         'rental_contract_id',

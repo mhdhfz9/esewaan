@@ -29,7 +29,7 @@
                 <button
                     type="button"
                     data-step-index="{{ $index }}"
-                    class="group flex flex-col items-center text-center focus:outline-none"
+                    class="group flex cursor-pointer flex-col items-center text-center focus:outline-none"
                     title="Lihat butiran {{ $step['label'] }}"
                 >
                     <span @class([

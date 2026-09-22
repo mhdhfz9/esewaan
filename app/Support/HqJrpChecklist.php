@@ -68,8 +68,8 @@ class HqJrpChecklist
     {
         return [
             self::KP => 'Kelulusan Pengurusan Tertinggi',
-            self::MOF => 'Pejabat Belanjawan Negeri, Kementerian Kewangan Malaysia (MOF) — untuk permohonan yang ada kenaikan kadar sewa (≥ RM500)',
-            self::EPU => 'Kementerian Ekonomi (KE) (jika keluasan melebihi 465 mps) — untuk permohonan perpindahan ruang pejabat / ruang pejabat baharu',
+            self::MOF => 'Baru / Pindah / Pelanjutan dengan Kenaikan Sewa Lebih 10% @ minimum RM500',
+            self::EPU => 'Permohonan kepada Kementerian Ekonomi (KE) (jika keluasan melebihi 465 mps) — untuk permohonan perpindahan ruang pejabat / ruang pejabat baharu',
             self::AADK_RECEIVE_EPU_COMMENTS => 'Cawangan Pembangunan AADK menerima ulasan daripada Kementerian Ekonomi (KE)',
             self::AADK_RECEIVE_MOF_COMMENTS => 'Cawangan Pembangunan AADK menerima ulasan daripada MOF melalui KDN',
             self::AADK_SUBMIT_BPH => 'Cawangan Pembangunan AADK mengemukakan permohonan Bahagian Hartanah (BPH) Jabatan Perdana Menteri untuk mendapatkan kelulusan',

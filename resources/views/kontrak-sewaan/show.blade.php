@@ -11,7 +11,7 @@
 
 @section('content')
 <div class="space-y-4">
-    <section class="glass-card overflow-hidden">
+    <section class="glass-card scroll-mt-24 overflow-hidden" data-progress-steps="0" id="progress-step-0">
         <div class="glass-divider-soft border-b px-4 py-3">
             <h2 class="text-base font-semibold text-slate-900">Maklumat Asas</h2>
             <p class="mt-0.5 text-xs text-slate-500">Ringkasan kategori, negeri dan pihak terlibat.</p>
@@ -118,10 +118,10 @@
         </div>
     </section>
 
-    <section class="glass-card">
+    <section class="glass-card" id="kemajuan-permohonan">
         <div class="glass-divider-soft border-b px-4 py-3">
             <h2 class="text-base font-semibold text-slate-900">Kemajuan Permohonan</h2>
-            <p class="mt-0.5 text-xs text-slate-500">Ringkasan peringkat permohonan sehingga kontrak sewaan.</p>
+            <p class="mt-0.5 text-xs text-slate-500">Klik pada mana-mana langkah untuk pergi ke bahagian berkenaan.</p>
         </div>
         <div class="overflow-visible px-4 pb-6 pt-4">
             @include('status-permohonan.partials.progress-stepper', ['steps' => $steps])
@@ -171,7 +171,7 @@
         </div>
     </section>
 
-    <section class="glass-card overflow-hidden">
+    <section class="glass-card scroll-mt-24 overflow-hidden" data-progress-steps="1" id="progress-step-1">
         <div class="glass-divider-soft border-b px-4 py-3">
             <h2 class="text-base font-semibold text-slate-900">Pengesahan Ibu Pejabat</h2>
             <p class="mt-0.5 text-xs text-slate-500">Checklist JRP yang telah direkodkan oleh Ibu Pejabat.</p>
@@ -186,7 +186,7 @@
         </div>
     </section>
 
-    <section class="glass-card overflow-hidden">
+    <section class="glass-card scroll-mt-24 overflow-hidden" data-progress-steps="2 3 4" id="progress-step-2">
         <div class="glass-divider-soft border-b px-4 py-3">
             <h2 class="text-base font-semibold text-slate-900">Status Draf Perjanjian</h2>
             <p class="mt-0.5 text-xs text-slate-500">Rekod peringkat penyediaan dan semakan draf perjanjian.</p>
@@ -221,7 +221,7 @@
         </div>
     </section>
 
-    <section class="glass-card overflow-hidden">
+    <section class="glass-card scroll-mt-24 overflow-hidden" data-progress-steps="5" id="progress-step-5">
         <div class="glass-divider-soft border-b px-4 py-3">
             <h2 class="text-base font-semibold text-slate-900">Pengesahan & Tandatangan</h2>
             <p class="mt-0.5 text-xs text-slate-500">Pengesahan penerimaan dan tandatangan perjanjian oleh Ibu Pejabat.</p>
@@ -231,7 +231,7 @@
         </div>
     </section>
 
-    <section class="glass-card overflow-hidden">
+    <section class="glass-card scroll-mt-24 overflow-hidden" data-progress-steps="6" id="progress-step-6">
         <div class="glass-divider-soft border-b px-4 py-3">
             <h2 class="text-base font-semibold text-slate-900">Mati Setem</h2>
             <p class="mt-0.5 text-xs text-slate-500">Pengesahan mati setem dan edaran dokumen oleh Negeri.</p>
@@ -244,7 +244,7 @@
         </div>
     </section>
 
-    <section class="glass-card overflow-hidden">
+    <section class="glass-card scroll-mt-24 overflow-hidden" data-progress-steps="7" id="progress-step-7">
         <div class="glass-divider-soft border-b px-4 py-3">
             <h2 class="text-base font-semibold text-slate-900">Selesai</h2>
             <p class="mt-0.5 text-xs text-slate-500">Permohonan selesai dan dimasukkan ke dalam Senarai Kontrak Sewaan.</p>
@@ -254,4 +254,56 @@
         </div>
     </section>
 </div>
+
+@push('scripts')
+<script>
+(function () {
+    const buttons = Array.from(document.querySelectorAll('#kemajuan-permohonan [data-step-index]'));
+    const sections = Array.from(document.querySelectorAll('[data-progress-steps]'));
+    if (!buttons.length || !sections.length) {
+        return;
+    }
+
+    function sectionForStep(index) {
+        const key = String(index);
+
+        return sections.find((section) => {
+            return section.dataset.progressSteps
+                .split(/\s+/)
+                .filter(Boolean)
+                .includes(key);
+        }) ?? null;
+    }
+
+    function highlight(index) {
+        buttons.forEach((button) => {
+            const circle = button.querySelector('[data-step-circle]');
+            const isActive = button.dataset.stepIndex === String(index);
+            if (!circle) {
+                return;
+            }
+
+            circle.classList.toggle('outline', isActive);
+            circle.classList.toggle('outline-2', isActive);
+            circle.classList.toggle('outline-offset-2', isActive);
+            circle.classList.toggle('outline-indigo-400', isActive);
+        });
+    }
+
+    buttons.forEach((button) => {
+        button.addEventListener('click', (event) => {
+            event.preventDefault();
+            const index = button.dataset.stepIndex;
+            const target = sectionForStep(index);
+            if (!target) {
+                return;
+            }
+
+            highlight(index);
+            target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        });
+    });
+})();
+</script>
+@endpush
 @endsection

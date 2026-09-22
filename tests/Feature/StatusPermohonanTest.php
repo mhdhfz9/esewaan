@@ -1164,7 +1164,7 @@ test('admin hq approve puu review moves application to draf lulus with selesai s
 
     expect($contract->fresh()->workflow_tahap)->toBe(RentalContract::WORKFLOW_DRAF_PERJANJIAN_LULUS)
         ->and($contract->fresh()->applicationStatusLabel())->toBe('Dokumen Perjanjian dikembalikan ke Cawangan Pembangunan AADK')
-        ->and($contract->fresh()->draftAgreementCurrentStepIndex())->toBe(5);
+        ->and($contract->fresh()->draftAgreementCurrentStepIndex())->toBe(4);
 });
 
 test('admin hq reject puu review returns application to penyediaan draf with next semakan label', function () {
@@ -1400,17 +1400,18 @@ test('review page shows progress stepper reflecting current stage', function () 
         ->assertSee('Semakan Ibu Pejabat')
         ->assertSee('Penyediaan Draf')
         ->assertSee('Dalam tindakan PUU')
-        ->assertSee('Pindaan Berdasarkan PUU')
         ->assertSee('Pengesahan & Tandatangan')
         ->assertSee('Mati Setem')
-        ->assertSee('Selesai');
+        ->assertSee('Selesai')
+        ->assertDontSee('Pindaan Berdasarkan PUU');
 
-    expect($contract->draftAgreementCurrentStepIndex())->toBe(6);
+    expect($contract->draftAgreementCurrentStepIndex())->toBe(5);
 
     $steps = $contract->draftAgreementProgressSteps();
-    expect($steps[0]['state'])->toBe('completed')
-        ->and($steps[6]['state'])->toBe('current')
-        ->and($steps[7]['state'])->toBe('upcoming');
+    expect($steps)->toHaveCount(8)
+        ->and($steps[0]['state'])->toBe('completed')
+        ->and($steps[5]['state'])->toBe('current')
+        ->and($steps[6]['state'])->toBe('upcoming');
 });
 
 test('review page stepper shows dalam tindakan puu at semakan stage', function () {
@@ -1437,18 +1438,18 @@ test('status list kemajuan uses overall lifecycle progress not proceed-only perc
     $completed = createStatusListContract('Johor', RentalContract::WORKFLOW_MENUNGGU_SEMAKAN_NEGERI);
 
     expect($pendingProceed->overallProgressPercent())->toBe(0)
-        ->and($pendingHq->overallProgressPercent())->toBe(13)
-        ->and($draftPrep->overallProgressPercent())->toBe(25)
-        ->and($returned->overallProgressPercent())->toBe(75)
+        ->and($pendingHq->overallProgressPercent())->toBe(14)
+        ->and($draftPrep->overallProgressPercent())->toBe(29)
+        ->and($returned->overallProgressPercent())->toBe(71)
         ->and($completed->overallProgressPercent())->toBe(100)
-        ->and($pendingHq->adminListProgressWidthPercent())->toBe(13);
+        ->and($pendingHq->adminListProgressWidthPercent())->toBe(14);
 
     $this->actingAs($admin)
         ->get(route('status-permohonan.index'))
         ->assertSuccessful()
-        ->assertSee('13%')
-        ->assertSee('25%')
-        ->assertSee('75%')
+        ->assertSee('14%')
+        ->assertSee('29%')
+        ->assertSee('71%')
         ->assertSee('100%');
 });
 

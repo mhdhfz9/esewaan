@@ -96,7 +96,7 @@ class KontrakSewaanController extends Controller
                 'CASE WHEN tarikh_mula = ? THEN COALESCE(sah_sehingga, \'9999-12-31\') ELSE COALESCE(tarikh_tamat, \'9999-12-31\') END ASC',
                 [$placeholder]
             )
-            ->orderBy('rental_contracts.id');
+            ->orderBy((new RentalContract)->getTable().'.id');
     }
 
     /**
@@ -112,7 +112,7 @@ class KontrakSewaanController extends Controller
                 'COALESCE(CASE WHEN tarikh_mula = ? THEN sah_sehingga ELSE tarikh_tamat END, tarikh_tamat) DESC',
                 [$placeholder]
             )
-            ->orderByDesc('rental_contracts.id');
+            ->orderByDesc((new RentalContract)->getTable().'.id');
     }
 
     private function ensureCanView(Request $request, RentalContract $contract): void
