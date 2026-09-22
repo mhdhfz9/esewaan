@@ -2,7 +2,9 @@
 
 namespace App\Http\Requests;
 
+use App\Support\UploadLimits;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rules\File;
 
 class StoreContractDocumentRequest extends FormRequest
 {
@@ -27,8 +29,26 @@ class StoreContractDocumentRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'document' => ['required', 'file', 'max:10240', 'mimes:pdf,jpg,jpeg,png'],
+            'document' => [
+                'required',
+                File::types(['pdf', 'jpg', 'jpeg', 'png'])
+                    ->max(UploadLimits::effectiveMaxKilobytes()),
+            ],
             'jenis' => ['required', 'in:surat_tawaran,gambar_premis,lain'],
+        ];
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    public function messages(): array
+    {
+        $limit = UploadLimits::humanEffectiveLimit();
+
+        return [
+            'document.required' => 'Sila pilih fail untuk dimuat naik.',
+            'document.max' => "Saiz fail tidak boleh melebihi {$limit}.",
+            'document.mimes' => 'Hanya fail PDF, JPG atau PNG dibenarkan.',
         ];
     }
 }

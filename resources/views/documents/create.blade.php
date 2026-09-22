@@ -8,7 +8,7 @@
 <div class="mx-auto max-w-xl glass-card p-6">
     <h1 class="mb-2 text-xl font-bold text-slate-800">Muat Naik Dokumen Sokongan</h1>
     <p class="mb-6 text-sm text-slate-600">{{ $contract->premise?->nama_ptj }} – Kontrak tamat {{ $contract->tarikh_tamat?->format('d/m/Y') }}</p>
-    <form method="post" action="{{ route('documents.store', $contract) }}" enctype="multipart/form-data">
+    <form id="contract-document-upload-form" method="post" action="{{ route('documents.store', $contract) }}" enctype="multipart/form-data">
         @csrf
         <div class="mb-4">
             <label for="jenis" class="mb-1 block text-sm font-medium text-slate-700">Jenis Dokumen *</label>
@@ -19,8 +19,18 @@
             </select>
         </div>
         <div class="mb-6">
-            <label for="document" class="mb-1 block text-sm font-medium text-slate-700">Fail * (PDF, JPG, PNG – max 10MB)</label>
+            <label for="document" class="mb-1 block text-sm font-medium text-slate-700">
+                Fail * (PDF, JPG, PNG – maksimum {{ \App\Support\UploadLimits::humanEffectiveLimit() }})
+            </label>
             <input type="file" name="document" id="document" required accept=".pdf,.jpg,.jpeg,.png" class="glass-input w-full rounded-xl px-3 py-2 text-sm">
+            @include('partials.file-size-guard', [
+                'inputId' => 'document',
+                'errorId' => 'document-size-error',
+                'formId' => 'contract-document-upload-form',
+            ])
+            @error('document')
+                <p class="mt-1 text-xs text-red-600">{{ $message }}</p>
+            @enderror
         </div>
         <div class="flex gap-3">
             <button type="submit" class="glass-btn-primary rounded-xl px-4 py-2 text-sm font-medium">Muat Naik</button>

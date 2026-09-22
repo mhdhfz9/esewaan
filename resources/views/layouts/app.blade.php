@@ -10,6 +10,8 @@
         @endif
     @endauth
     <title>{{ config('app.name') }} - @yield('title', 'E-Sewaan AADK')</title>
+    <link rel="icon" href="{{ asset('favicon.png') . '?v=' . filemtime(public_path('favicon.png')) }}" type="image/png">
+    <link rel="apple-touch-icon" href="{{ asset('favicon.png') . '?v=' . filemtime(public_path('favicon.png')) }}">
     @if (file_exists(public_path('build/manifest.json')) || file_exists(public_path('hot')))
         @vite(['resources/css/app.css', 'resources/js/app.js'])
     @endif

@@ -968,6 +968,37 @@ test('admin negeri upload draft requires pdf file', function () {
         ->assertSessionHasErrors('document');
 });
 
+test('admin negeri upload draft rejects file larger than app size limit', function () {
+    Storage::fake('public');
+    $admin = User::factory()->create(['role' => 'admin_negeri', 'negeri' => 'Johor']);
+    $contract = createStatusListContract('Johor', RentalContract::WORKFLOW_PENYEDIAAN_DRAF_PERJANJIAN);
+    $oversizedKilobytes = \App\Support\UploadLimits::APP_MAX_KILOBYTES + 1;
+
+    $this->actingAs($admin)
+        ->from(route('status-permohonan.review', $contract))
+        ->post(route('status-permohonan.upload-draft', $contract), [
+            'document' => UploadedFile::fake()->create('huge.pdf', $oversizedKilobytes, 'application/pdf'),
+        ])
+        ->assertRedirect(route('status-permohonan.review', $contract))
+        ->assertSessionHasErrors('document');
+
+    expect($contract->fresh()->workflow_tahap)->toBe(RentalContract::WORKFLOW_PENYEDIAAN_DRAF_PERJANJIAN)
+        ->and($contract->fresh()->documents()->count())->toBe(0);
+});
+
+test('draft upload form shows size limit and client side size guard', function () {
+    $admin = User::factory()->create(['role' => 'admin_negeri', 'negeri' => 'Johor']);
+    $contract = createStatusListContract('Johor', RentalContract::WORKFLOW_PENYEDIAAN_DRAF_PERJANJIAN);
+    $contract->update(['admin_negeri_user_id' => $admin->id]);
+
+    $this->actingAs($admin)
+        ->get(route('status-permohonan.review', $contract))
+        ->assertSuccessful()
+        ->assertSee('draft-document-size-error', false)
+        ->assertSee('Had maksimum ialah', false)
+        ->assertSee(\App\Support\UploadLimits::humanEffectiveLimit());
+});
+
 test('admin negeri upload draft pdf moves application to semakan 1', function () {
     Storage::fake('public');
     $admin = User::factory()->create(['role' => 'admin_negeri', 'negeri' => 'Johor']);

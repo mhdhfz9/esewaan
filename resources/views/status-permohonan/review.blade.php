@@ -270,6 +270,7 @@
 
                         @if(auth()->user()->isAdminNegeri() && $contract->canUploadDraftAgreement())
                             <form
+                                id="draft-upload-form"
                                 method="POST"
                                 action="{{ route('status-permohonan.upload-draft', $contract) }}"
                                 enctype="multipart/form-data"
@@ -296,6 +297,11 @@
                                         accept=".pdf,application/pdf"
                                         class="glass-input w-full rounded-xl px-3 py-2 text-sm"
                                     >
+                                    @include('partials.file-size-guard', [
+                                        'inputId' => 'draft-document',
+                                        'errorId' => 'draft-document-size-error',
+                                        'formId' => 'draft-upload-form',
+                                    ])
                                     @error('document')
                                         <p class="mt-1 text-xs text-red-600">{{ $message }}</p>
                                     @enderror

@@ -18,13 +18,11 @@ use App\Http\Requests\ResolveWithdrawalApplicationRequest;
 use App\Http\Requests\ReturnDraftToHqRequest;
 use App\Http\Requests\SignAgreementRequest;
 use App\Http\Requests\StoreDraftAgreementRequest;
-use App\Mail\ApplicationApprovedByHqNotification;
-use App\Mail\ApplicationSubmittedToAdminNegeriNotification;
-use App\Mail\ApplicationSubmittedToHqNotification;
 use App\Models\ContractDocument;
 use App\Models\RentalContract;
 use App\Models\User;
 use App\Services\ActivityLogger;
+use App\Services\ApplicationWorkflowMailer;
 use App\Services\SidebarNotificationService;
 use App\Support\AdminProceedSteps;
 use App\Support\ApplicationCategories;
@@ -37,12 +35,15 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Mail;
 use Illuminate\View\View;
 
 class StatusPermohonanController extends Controller
 {
     use RespondsWithTablePartial;
+
+    public function __construct(
+        private ApplicationWorkflowMailer $workflowMailer,
+    ) {}
 
     /**
      * View status permohonan. Negeri sees their negeri; Admin sees only submitted applications.
@@ -136,8 +137,7 @@ class StatusPermohonanController extends Controller
             ['contract_id' => $contract->id, 'next_workflow' => $nextWorkflow],
         );
 
-        $this->notifyAdminNegeriOfApprovedApplication($contract->fresh(['premise', 'submittedBy', 'adminNegeriUser']), $hqUser);
-        $this->notifyAdminHqOfApprovedApplication($contract->fresh(['premise', 'submittedBy', 'adminNegeriUser']), $hqUser);
+        $this->workflowMailer->notifyApprovedByHq($contract->fresh(['premise', 'submittedBy', 'adminNegeriUser']), $hqUser);
 
         return redirect()
             ->route('status-permohonan.index')
@@ -180,6 +180,8 @@ class StatusPermohonanController extends Controller
             ['contract_id' => $contract->id, 'semakan_count' => $nextCount],
         );
 
+        $this->workflowMailer->notifyDraftUploaded($contract->fresh(['premise', 'submittedBy', 'adminNegeriUser']), $user);
+
         return redirect()
             ->route('status-permohonan.review', $contract)
             ->with('success', 'Draf perjanjian berjaya dimuat naik dan dihantar untuk Semakan '.$nextCount.'.');
@@ -205,6 +207,8 @@ class StatusPermohonanController extends Controller
             'Semakan PUU premis '.($contract->premise?->nama_ptj ?? '–').' diluluskan ('.$contract->semakanLabel().').',
             ['contract_id' => $contract->id, 'semakan_count' => $contract->semakan_count],
         );
+
+        $this->workflowMailer->notifyDraftApproved($contract->fresh(['premise', 'submittedBy', 'adminNegeriUser']), $hqUser);
 
         return redirect()
             ->route('status-permohonan.index')
@@ -233,6 +237,8 @@ class StatusPermohonanController extends Controller
             ['contract_id' => $contract->id, 'semakan_count' => $contract->semakan_count],
         );
 
+        $this->workflowMailer->notifyPuuRejected($contract->fresh(['premise', 'submittedBy', 'adminNegeriUser']), $hqUser);
+
         return redirect()
             ->route('status-permohonan.index')
             ->with('success', 'Semakan PUU dibatalkan. Negeri perlu muat naik draf semula.');
@@ -256,6 +262,8 @@ class StatusPermohonanController extends Controller
             'Draf perjanjian premis '.($contract->premise?->nama_ptj ?? '–').' diluluskan tanpa pindaan dan dikembalikan kepada Negeri.',
             ['contract_id' => $contract->id],
         );
+
+        $this->workflowMailer->notifyDraftApproved($contract->fresh(['premise', 'submittedBy', 'adminNegeriUser']), $hqUser);
 
         return redirect()
             ->route('status-permohonan.index')
@@ -283,6 +291,8 @@ class StatusPermohonanController extends Controller
             ['contract_id' => $contract->id],
         );
 
+        $this->workflowMailer->notifyReturnedToHq($contract->fresh(['premise', 'submittedBy', 'adminNegeriUser']), $user);
+
         return redirect()
             ->route('status-permohonan.index')
             ->with('success', 'Draf akhir telah dikembalikan kepada Ibu Pejabat (Cawangan Pembangunan AADK).');
@@ -308,6 +318,8 @@ class StatusPermohonanController extends Controller
             'Perjanjian premis '.($contract->premise?->nama_ptj ?? '–').' dihantar kepada Negeri untuk mati setem.',
             ['contract_id' => $contract->id],
         );
+
+        $this->workflowMailer->notifySentForStampDuty($contract->fresh(['premise', 'submittedBy', 'adminNegeriUser']), $hqUser);
 
         return redirect()
             ->route('status-permohonan.index')
@@ -336,6 +348,8 @@ class StatusPermohonanController extends Controller
             'Perjanjian premis '.($contract->premise?->nama_ptj ?? '–').' selesai selepas mati setem dan dimasukkan ke dalam Senarai Kontrak Sewaan.',
             ['contract_id' => $contract->id],
         );
+
+        $this->workflowMailer->notifyCompleted($contract->fresh(['premise', 'submittedBy', 'adminNegeriUser']), $user);
 
         return redirect()
             ->route('kontrak-sewaan.index')
@@ -571,103 +585,11 @@ class StatusPermohonanController extends Controller
             ['contract_id' => $contract->id],
         );
 
-        $this->notifyAdminHqOfSubmittedApplication($contract, $user);
-        $this->notifyAdminNegeriOfSubmittedApplication($contract, $user);
+        $this->workflowMailer->notifySubmittedToHq($contract, $user);
 
         return redirect()
             ->route('status-permohonan.index')
             ->with('success', 'Permohonan telah dihantar kepada Ibu Pejabat untuk semakan.');
-    }
-
-    private function notifyAdminHqOfSubmittedApplication(RentalContract $contract, User $submittedBy): void
-    {
-        $contract->loadMissing('premise');
-
-        foreach ($this->adminHqNotificationRecipients() as $email) {
-            Mail::to($email)->send(new ApplicationSubmittedToHqNotification($contract, $submittedBy));
-        }
-    }
-
-    private function notifyAdminNegeriOfSubmittedApplication(RentalContract $contract, User $submittedBy): void
-    {
-        $contract->loadMissing(['premise', 'adminNegeriUser', 'submittedBy']);
-
-        foreach ($this->adminNegeriNotificationRecipients($contract) as $email) {
-            Mail::to($email)->send(new ApplicationSubmittedToAdminNegeriNotification($contract, $submittedBy));
-        }
-    }
-
-    private function notifyAdminNegeriOfApprovedApplication(RentalContract $contract, User $approvedBy): void
-    {
-        $contract->loadMissing(['premise', 'adminNegeriUser', 'submittedBy']);
-
-        foreach ($this->adminNegeriNotificationRecipients($contract) as $email) {
-            Mail::to($email)->send(new ApplicationApprovedByHqNotification($contract, $approvedBy));
-        }
-    }
-
-    private function notifyAdminHqOfApprovedApplication(RentalContract $contract, User $approvedBy): void
-    {
-        $contract->loadMissing(['premise', 'adminNegeriUser', 'submittedBy']);
-
-        foreach ($this->adminHqNotificationRecipients() as $email) {
-            Mail::to($email)->send(new ApplicationApprovedByHqNotification($contract, $approvedBy));
-        }
-    }
-
-    /**
-     * @return list<string>
-     */
-    private function adminHqNotificationRecipients(): array
-    {
-        $testRecipient = config('mail.test_recipient');
-
-        if (filled($testRecipient)) {
-            return [$testRecipient];
-        }
-
-        return User::query()
-            ->where('role', 'admin_hq')
-            ->where('is_active', true)
-            ->whereNotNull('email')
-            ->pluck('email')
-            ->all();
-    }
-
-    /**
-     * @return list<string>
-     */
-    private function adminNegeriNotificationRecipients(RentalContract $contract): array
-    {
-        $testRecipient = config('mail.test_recipient');
-
-        if (filled($testRecipient)) {
-            return [$testRecipient];
-        }
-
-        $contract->loadMissing(['adminNegeriUser', 'premise']);
-
-        if (
-            filled($contract->adminNegeriUser?->email)
-            && $contract->adminNegeriUser->is_active
-            && $contract->adminNegeriUser->isAdminNegeri()
-        ) {
-            return [$contract->adminNegeriUser->email];
-        }
-
-        $negeri = $contract->premise?->negeri;
-
-        if (! filled($negeri)) {
-            return [];
-        }
-
-        return User::query()
-            ->where('role', 'admin_negeri')
-            ->where('negeri', $negeri)
-            ->where('is_active', true)
-            ->whereNotNull('email')
-            ->pluck('email')
-            ->all();
     }
 
     private function listFingerprint(User $user, string $search, string $tab): string
