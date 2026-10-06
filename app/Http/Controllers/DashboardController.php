@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\RentalContract;
 use App\Support\StatusTindakan;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
@@ -15,19 +16,22 @@ class DashboardController extends Controller
     {
         $user = $request->user();
 
-        if ($user->isAdminNegeri()) {
-            return redirect()->route('status-permohonan.index');
-        }
-
-        if (! $user->isAdmin()) {
+        if (! $user?->isAdmin()) {
             return redirect()->route('login');
         }
 
+        if ($user->isAdminNegeri() && ! filled($user->negeri)) {
+            return redirect()->route('status-permohonan.index');
+        }
+
+        $negeri = $user->isAdminNegeri() ? $user->negeri : null;
+
         $permohonanBaharu = RentalContract::query()
             ->where('workflow_tahap', RentalContract::WORKFLOW_MENUNGGU_SEMAKAN_HQ)
+            ->tap(fn (Builder $query) => $this->scopeToNegeri($query, $negeri))
             ->count();
 
-        $dalamTindakanByStatus = collect(StatusTindakan::breakdownWithCounts());
+        $dalamTindakanByStatus = collect(StatusTindakan::breakdownWithCounts($negeri));
         $progressPermohonan = (int) $dalamTindakanByStatus->sum('count');
 
         $activeContracts = RentalContract::query()
@@ -35,6 +39,7 @@ class DashboardController extends Controller
             ->notSuperseded()
             ->kontrakNotExpired()
             ->with('premise')
+            ->tap(fn (Builder $query) => $this->scopeToNegeri($query, $negeri))
             ->get();
 
         $kontrakAktif = $activeContracts->count();
@@ -55,6 +60,8 @@ class DashboardController extends Controller
         $kontrakLebihLapanBulan = max(0, $kontrakAktif - $kontrakTigaBulan - $kontrakLapanBulan);
 
         return view('dashboard.index', [
+            'viewer' => $user,
+            'scopedNegeri' => $negeri,
             'permohonanBaharu' => $permohonanBaharu,
             'progressPermohonan' => $progressPermohonan,
             'dalamTindakanByStatus' => $dalamTindakanByStatus,
@@ -71,6 +78,19 @@ class DashboardController extends Controller
             ),
             'statusChart' => $this->statusChartData($dalamTindakanByStatus),
         ]);
+    }
+
+    /**
+     * @param  Builder<RentalContract>  $query
+     * @return Builder<RentalContract>
+     */
+    private function scopeToNegeri(Builder $query, ?string $negeri): Builder
+    {
+        if (! filled($negeri)) {
+            return $query;
+        }
+
+        return $query->whereHas('premise', fn (Builder $premiseQuery) => $premiseQuery->where('negeri', $negeri));
     }
 
     /**

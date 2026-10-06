@@ -2,7 +2,9 @@
 
 @section('title', 'Papan Pemuka')
 @section('header_title', 'Papan Pemuka')
-@section('header_subtitle', 'Ringkasan permohonan dan kontrak sewaan semasa')
+@section('header_subtitle', filled($scopedNegeri ?? null)
+    ? 'Ringkasan permohonan dan kontrak sewaan untuk '.$scopedNegeri
+    : 'Ringkasan permohonan dan kontrak sewaan semasa')
 
 @section('content')
 @php

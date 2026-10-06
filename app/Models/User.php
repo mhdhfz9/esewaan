@@ -88,14 +88,6 @@ class User extends Authenticatable
 
     public function homeRoute(): string
     {
-        if ($this->isAdminHq()) {
-            return route('dashboard');
-        }
-
-        if ($this->isAdminNegeri()) {
-            return route('status-permohonan.index');
-        }
-
         return route('dashboard');
     }
 

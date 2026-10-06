@@ -23,5 +23,5 @@ test('seeded admin negeri can login', function () {
     $this->post(route('login.store'), [
         'email' => 'negeri@esewa.test',
         'password' => 'password',
-    ])->assertRedirect(route('status-permohonan.index'));
+    ])->assertRedirect(route('dashboard'));
 });

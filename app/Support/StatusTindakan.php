@@ -111,7 +111,7 @@ class StatusTindakan
     /**
      * @return list<array{key: string, status: string, count: int}>
      */
-    public static function breakdownWithCounts(): array
+    public static function breakdownWithCounts(?string $negeri = null): array
     {
         $definitions = self::definitions();
 
@@ -125,6 +125,10 @@ class StatusTindakan
             ? collect()
             : RentalContract::query()
                 ->whereIn('workflow_tahap', $workflowKeys)
+                ->when(
+                    filled($negeri),
+                    fn ($query) => $query->whereHas('premise', fn ($premiseQuery) => $premiseQuery->where('negeri', $negeri))
+                )
                 ->selectRaw('workflow_tahap, COUNT(*) as total')
                 ->groupBy('workflow_tahap')
                 ->pluck('total', 'workflow_tahap');

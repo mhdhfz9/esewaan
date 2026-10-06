@@ -26,7 +26,7 @@ class UserSeeder extends Seeder
                 'name' => 'Negeri Johor',
                 'password' => 'password',
                 'role' => 'admin_negeri',
-                'negeri' => 'Johor',
+                'negeri' => 'Selangor',
                 'is_active' => true,
             ]
         );

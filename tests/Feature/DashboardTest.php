@@ -41,12 +41,33 @@ function createDashboardContract(
     ]);
 }
 
-test('admin negeri is redirected away from dashboard', function () {
+test('admin negeri can view dashboard scoped to their negeri only', function () {
     $user = User::factory()->create(['role' => 'admin_negeri', 'negeri' => 'Johor']);
 
-    $this->actingAs($user)
-        ->get(route('dashboard'))
-        ->assertRedirect(route('status-permohonan.index'));
+    createDashboardContract(RentalContract::WORKFLOW_MENUNGGU_SEMAKAN_HQ, 'Johor');
+    createDashboardContract(RentalContract::WORKFLOW_MENUNGGU_SEMAKAN_HQ, 'Melaka');
+    createDashboardContract(RentalContract::WORKFLOW_PENYEDIAAN_DRAF_PERJANJIAN, 'Johor');
+    createDashboardContract(RentalContract::WORKFLOW_PENYEDIAAN_DRAF_PERJANJIAN, 'Melaka');
+    createDashboardContract(RentalContract::WORKFLOW_MENUNGGU_SEMAKAN_NEGERI, 'Johor', now()->addMonths(2)->toDateString());
+    createDashboardContract(RentalContract::WORKFLOW_MENUNGGU_SEMAKAN_NEGERI, 'Melaka', now()->addMonths(2)->toDateString());
+    createDashboardContract(RentalContract::WORKFLOW_MENUNGGU_SEMAKAN_NEGERI, 'Johor', now()->addMonths(20)->toDateString());
+
+    $response = $this->actingAs($user)->get(route('dashboard'));
+
+    $response->assertSuccessful()
+        ->assertViewHas('scopedNegeri', 'Johor')
+        ->assertViewHas('permohonanBaharu', 1)
+        ->assertViewHas('progressPermohonan', 1)
+        ->assertViewHas('kontrakAktif', 2)
+        ->assertViewHas('kontrakTigaBulan', 1)
+        ->assertViewHas('kontrakLebihLapanBulan', 1)
+        ->assertSee('Papan Pemuka')
+        ->assertSee('Ringkasan permohonan dan kontrak sewaan untuk Johor');
+
+    $tigaList = $response->viewData('alertListTigaBulan');
+
+    expect($tigaList)->toHaveCount(1)
+        ->and($tigaList->first()->premise?->negeri)->toBe('Johor');
 });
 
 test('dashboard shows accurate counts based on current workflow data', function () {

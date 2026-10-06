@@ -342,12 +342,13 @@ test('admin can view audit trail with process log entries', function () {
         ->assertSee('Proses Kontrak');
 });
 
-test('admin negeri is redirected away from dashboard', function () {
-    $admin = User::factory()->create(['role' => 'admin_negeri', 'negeri' => 'Johor']);
+test('admin negeri login redirects to dashboard', function () {
+    $admin = User::factory()->create(['role' => 'admin_negeri', 'negeri' => 'Johor', 'email' => 'negeri-login@example.test']);
 
-    $this->actingAs($admin)
-        ->get(route('dashboard'))
-        ->assertRedirect(route('status-permohonan.index'));
+    $this->post(route('login.store'), [
+        'email' => $admin->email,
+        'password' => 'password',
+    ])->assertRedirect(route('dashboard'));
 });
 
 test('admin hq login redirects to dashboard', function () {
